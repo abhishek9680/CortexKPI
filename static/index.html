@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CortexKPI — Autonomous Executive Storytelling Engine</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body class="persona-csuite">
+
+  <!-- Header Bar -->
+  <header class="header-bar">
+    <div class="logo-group">
+      <div class="logo-icon">🧠</div>
+      <div>
+        <div class="logo-text">CORTEX KPI</div>
+        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em;">ACCENTURE INNOVATION CHALLENGE 2026</div>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <!-- Persona View Switcher -->
+      <div class="persona-switcher">
+        <button class="persona-btn active" data-persona="csuite">👑 C-Suite</button>
+        <button class="persona-btn" data-persona="devops">⚙️ DevOps</button>
+        <button class="persona-btn" data-persona="bi">📊 BI Analyst</button>
+      </div>
+
+      <!-- Scenario Selector -->
+      <select id="scenario-select" class="scenario-select">
+        <option value="SCENARIO_1">Loading Scenarios...</option>
+      </select>
+
+      <!-- PDF Export Button -->
+      <button id="pdf-export-btn" class="btn btn-outline">
+        📄 Download PDF Report
+      </button>
+    </div>
+  </header>
+
+  <!-- Executive Summary Banner -->
+  <section class="glass-panel executive-banner">
+    <div class="banner-title-group">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span class="badge badge-rose pulse-anomaly">🔴 CRITICAL ANOMALY DETECTED</span>
+        <span id="banner-summary" style="font-size: 0.8rem; color: var(--text-muted);">Confidence: 96% (HIGH_CONFIDENCE)</span>
+      </div>
+      <h2 id="banner-headline">APAC Revenue dropped 41.8% due to Stripe 3DS Gateway OTP failure</h2>
+    </div>
+
+    <div class="banner-impact">
+      <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Financial Impact</div>
+      <div id="banner-impact" class="impact-value">-$184,200/day</div>
+    </div>
+  </section>
+
+  <!-- Main 4-Panel Dashboard Grid -->
+  <main class="dashboard-grid">
+
+    <!-- LAYER 1: Anomaly Detection Time-Series Chart -->
+    <section class="glass-panel panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📈 Layer 1: Bayesian Anomaly Detection</span>
+        </div>
+        <span class="badge badge-blue">Rolling 28-Day Baseline</span>
+      </div>
+      <div class="panel-body" style="min-height: 280px; position: relative;">
+        <canvas id="timeseries-canvas"></canvas>
+      </div>
+    </section>
+
+    <!-- LAYER 4: Honest Detective Diagnostic Console & Narrative -->
+    <section class="glass-panel panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🕵️ Layer 4: Executive Narrative & Honest Detective</span>
+        </div>
+        <span class="badge badge-green">Epistemic Safeguards Active</span>
+      </div>
+      <div class="panel-body" id="narrative-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- LAYER 2: Causal Metric Dependency Tree -->
+    <section class="glass-panel panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🌳 Layer 2: Causal Metric Dependency Tree</span>
+        </div>
+        <span class="badge badge-amber">Variance Attribution ML</span>
+      </div>
+      <div class="panel-body" id="causal-tree-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- LAYER 3: Multimodal RAG Evidence Fusion -->
+    <section class="glass-panel panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🔍 Layer 3: Multimodal RAG Evidence Fusion</span>
+        </div>
+        <span class="badge badge-blue">Jira / Zendesk / Slack NLP</span>
+      </div>
+      <div class="panel-body" id="evidence-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JS Component Scripts -->
+  <script src="/static/js/components/chart.js"></script>
+  <script src="/static/js/components/tree.js"></script>
+  <script src="/static/js/components/evidence.js"></script>
+  <script src="/static/js/components/narrative.js"></script>
+  <script src="/static/js/components/pdfExport.js"></script>
+  <script src="/static/js/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,4 @@
+alert_id,channel,timestamp,severity,source,message,metric_tag
+ALT-9901,#war-room-checkout,2026-08-23 14:32:10,CRITICAL,Datadog-APM,"p99 Gateway Latency Spike: Stripe 3DS token handshake latency rose to 4,850ms (Normal baseline: 320ms). 502 Bad Gateway error rate 42.1%.",Payment_Success_Rate
+ALT-8812,#infra-alerts,2026-08-08 09:45:00,WARNING,Cloudflare-DNS,Cloudflare DNS resolving latency spike in EU-West region (220ms vs 18ms baseline).,Conversion_Rate
+ALT-7703,#growth-marketing,2026-07-14 10:15:00,INFO,Google-Analytics,"Viral surge detected on TikTok promo code FLASH40. Concurrent active sessions hit 85,000.",Sessions
