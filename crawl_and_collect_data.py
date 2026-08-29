@@ -40,31 +40,51 @@ def crawl_and_collect():
             # Assign scenario based on region and day index
             if region == "APAC" and day >= 350:
                 scen_id = "SCENARIO_1"
-                # Incident active: 45% drop in payment success
-                pay_val = round(54.2 + random.uniform(-1.0, 1.0), 2)
-                cvr_val = round(1.12 + random.uniform(-0.05, 0.05), 2)
-                sess_val = int(120000 * seasonality * (1 + random.uniform(-0.02, 0.02)))
-                aov_val = round(182.0 + random.uniform(-1.0, 1.0), 2)
+                if day >= 357: # Incident active (last 8 days)
+                    pay_val = round(54.2 + random.gauss(0, 0.4), 2)
+                    cvr_val = round(1.12 + random.gauss(0, 0.05), 2)
+                    sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.015)))
+                    aov_val = round(182.0 + random.gauss(0, 1.2), 2)
+                else: # Pre-incident baseline week
+                    pay_val = round(98.2 + random.gauss(0, 0.4), 2)
+                    cvr_val = round(2.85 + random.gauss(0, 0.08), 2)
+                    sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.015)))
+                    aov_val = round(185.0 + random.gauss(0, 1.5), 2)
                 rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
+
             elif region == "EU" and 320 <= day < 350:
                 scen_id = "SCENARIO_2"
-                pay_val = round(98.1 + random.uniform(-0.2, 0.2), 2)
-                cvr_val = round(1.65 + random.uniform(-0.05, 0.05), 2)
-                sess_val = int(120000 * seasonality * (1 + random.uniform(-0.02, 0.02)))
-                aov_val = round(184.0 + random.uniform(-1.0, 1.0), 2)
+                if day >= 335: # Incident active (last 15 days)
+                    pay_val = round(98.1 + random.gauss(0, 0.3), 2)
+                    cvr_val = round(1.65 + random.gauss(0, 0.05), 2)
+                    sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.015)))
+                    aov_val = round(184.0 + random.gauss(0, 1.2), 2)
+                else:
+                    pay_val = round(98.2 + random.gauss(0, 0.4), 2)
+                    cvr_val = round(2.85 + random.gauss(0, 0.08), 2)
+                    sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.015)))
+                    aov_val = round(185.0 + random.gauss(0, 1.5), 2)
                 rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
+
             elif region == "NA" and 280 <= day < 320:
                 scen_id = "SCENARIO_3"
-                pay_val = round(98.5 + random.uniform(-0.2, 0.2), 2)
-                cvr_val = round(3.45 + random.uniform(-0.05, 0.05), 2)
-                sess_val = int(177600 * seasonality * (1 + random.uniform(-0.02, 0.02)))
-                aov_val = round(195.0 + random.uniform(-1.0, 1.0), 2)
+                if day >= 295: # Surge active (last 25 days)
+                    pay_val = round(98.5 + random.gauss(0, 0.3), 2)
+                    cvr_val = round(3.45 + random.gauss(0, 0.06), 2)
+                    sess_val = int(177600 * seasonality * (1 + random.gauss(0, 0.015)))
+                    aov_val = round(195.0 + random.gauss(0, 1.5), 2)
+                else:
+                    pay_val = round(98.2 + random.gauss(0, 0.4), 2)
+                    cvr_val = round(2.85 + random.gauss(0, 0.08), 2)
+                    sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.015)))
+                    aov_val = round(185.0 + random.gauss(0, 1.5), 2)
                 rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
+
             else:
                 scen_id = "SCENARIO_NORMAL"
                 pay_val = round(98.2 + random.gauss(0, 0.4), 2)
                 cvr_val = round(2.85 + random.gauss(0, 0.08), 2)
-                sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.02)))
+                sess_val = int(120000 * seasonality * (1 + random.gauss(0, 0.015)))
                 aov_val = round(185.0 + random.gauss(0, 1.5), 2)
                 rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
 

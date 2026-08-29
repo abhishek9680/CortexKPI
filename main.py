@@ -228,44 +228,63 @@ def simulate_whatif(req: WhatIfRequest):
 
 @app.post("/api/execute_mitigation")
 def execute_mitigation(req: MitigationRequest):
+    import random
     metrics_path = os.path.join(DATA_DIR, "metrics_timeseries.csv")
     df_metrics = pd.read_csv(metrics_path)
     
     is_rollback = req.action_type != "REINJECT_ANOMALY"
 
     if req.scenario_id == "SCENARIO_2":
-        mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
-        df_metrics.loc[mask_cvr, 'value'] = 2.85 if is_rollback else 1.65
-
-        mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
-        df_metrics.loc[mask_rev, 'value'] = 631800.0 if is_rollback else 364320.0
-
-        mask_pay = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Payment_Success_Rate')
-        df_metrics.loc[mask_pay, 'value'] = 98.2 if is_rollback else 98.1
+        scen_dates = sorted(df_metrics[df_metrics['scenario_id'] == req.scenario_id]['timestamp'].unique())
+        incident_dates = scen_dates[-15:]
+        for d in incident_dates:
+            mask_d = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['timestamp'] == d)
+            cvr_val = round((2.85 if is_rollback else 1.65) + random.gauss(0, 0.05), 2)
+            sess_val = int(120000 * (1 + random.gauss(0, 0.015)))
+            aov_val = round(184.0 + random.gauss(0, 1.2), 2)
+            pay_val = round(98.1 + random.gauss(0, 0.3), 2)
+            rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
+            
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Conversion_Rate'), 'value'] = cvr_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Payment_Success_Rate'), 'value'] = pay_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Sessions'), 'value'] = sess_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'AOV'), 'value'] = aov_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Revenue'), 'value'] = rev_val
 
     elif req.scenario_id == "SCENARIO_3":
-        mask_sess = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Sessions')
-        df_metrics.loc[mask_sess, 'value'] = 120000.0 if is_rollback else 177600.0
+        scen_dates = sorted(df_metrics[df_metrics['scenario_id'] == req.scenario_id]['timestamp'].unique())
+        incident_dates = scen_dates[-25:]
+        for d in incident_dates:
+            mask_d = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['timestamp'] == d)
+            sess_val = int((120000 if is_rollback else 177600) * (1 + random.gauss(0, 0.015)))
+            cvr_val = round((2.85 if is_rollback else 3.45) + random.gauss(0, 0.06), 2)
+            aov_val = round((185.0 if is_rollback else 195.0) + random.gauss(0, 1.5), 2)
+            pay_val = round(98.5 + random.gauss(0, 0.3), 2)
+            rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
 
-        mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
-        df_metrics.loc[mask_cvr, 'value'] = 2.85 if is_rollback else 3.45
-
-        mask_aov = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'AOV')
-        df_metrics.loc[mask_aov, 'value'] = 185.0 if is_rollback else 195.0
-
-        mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
-        df_metrics.loc[mask_rev, 'value'] = 631800.0 if is_rollback else 1194762.0
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Sessions'), 'value'] = sess_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Conversion_Rate'), 'value'] = cvr_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'AOV'), 'value'] = aov_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Payment_Success_Rate'), 'value'] = pay_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Revenue'), 'value'] = rev_val
 
     else:
-        # Default / SCENARIO_1: Payment Success Rate Anomaly
-        mask_pay = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Payment_Success_Rate')
-        df_metrics.loc[mask_pay, 'value'] = 98.2 if is_rollback else 54.2
+        # SCENARIO_1: Payment Success Rate Anomaly
+        scen_dates = sorted(df_metrics[df_metrics['scenario_id'] == req.scenario_id]['timestamp'].unique())
+        incident_dates = scen_dates[-8:]
+        for d in incident_dates:
+            mask_d = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['timestamp'] == d)
+            pay_val = round((98.2 if is_rollback else 54.2) + random.gauss(0, 0.4), 2)
+            cvr_val = round((2.85 if is_rollback else 1.12) + random.gauss(0, 0.05), 2)
+            sess_val = int(120000 * (1 + random.gauss(0, 0.015)))
+            aov_val = round(182.0 + random.gauss(0, 1.2), 2)
+            rev_val = round(sess_val * (cvr_val / 100.0) * aov_val, 2)
 
-        mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
-        df_metrics.loc[mask_cvr, 'value'] = 2.85 if is_rollback else 1.12
-
-        mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
-        df_metrics.loc[mask_rev, 'value'] = 631800.0 if is_rollback else 244608.0
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Payment_Success_Rate'), 'value'] = pay_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Conversion_Rate'), 'value'] = cvr_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Sessions'), 'value'] = sess_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'AOV'), 'value'] = aov_val
+            df_metrics.loc[mask_d & (df_metrics['kpi_name'] == 'Revenue'), 'value'] = rev_val
 
     df_metrics.to_csv(metrics_path, index=False)
 
