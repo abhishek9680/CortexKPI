@@ -87,19 +87,47 @@ class CausalMetricTreeML:
         }
 
     def simulate_whatif(self, metric_snapshot, node_adjusted, new_value):
+        """
+        Simulate a counterfactual 'What-If' scenario by adjusting a single metric
+        and propagating changes through the causal tree.
+        
+        Handles all node types: Sessions, AOV, Conversion_Rate, Payment_Success_Rate.
+        Recalculates z-scores so tree node status colors update in real-time.
+        """
         snapshot = {k: dict(v) for k, v in metric_snapshot.items()}
         if node_adjusted in snapshot:
             snapshot[node_adjusted]["value"] = safe_float(new_value, 90.0)
             
+            # Propagate causal dependencies based on which node was adjusted
             if node_adjusted == "Payment_Success_Rate":
-                base_auth = safe_float(metric_snapshot["Payment_Success_Rate"]["baseline"], 98.0)
-                conv_baseline = safe_float(metric_snapshot["Conversion_Rate"]["baseline"], 2.85)
-                ratio = new_value / (base_auth + 1e-5)
+                # Payment auth rate directly affects conversion rate
+                base_auth = safe_float(metric_snapshot.get("Payment_Success_Rate", {}).get("baseline"), 98.0)
+                conv_baseline = safe_float(metric_snapshot.get("Conversion_Rate", {}).get("baseline"), 2.85)
+                ratio = safe_float(new_value, 90.0) / (base_auth + 1e-5)
                 snapshot["Conversion_Rate"]["value"] = round(conv_baseline * ratio, 2)
+            
+            elif node_adjusted == "Conversion_Rate":
+                # Conversion rate changes propagate to payment success rate proportionally
+                conv_baseline = safe_float(metric_snapshot.get("Conversion_Rate", {}).get("baseline"), 2.85)
+                psr_baseline = safe_float(metric_snapshot.get("Payment_Success_Rate", {}).get("baseline"), 98.0)
+                if conv_baseline > 0:
+                    ratio = safe_float(new_value, 2.85) / (conv_baseline + 1e-5)
+                    snapshot["Payment_Success_Rate"]["value"] = round(min(100.0, psr_baseline * ratio), 2)
 
-            sess = safe_float(snapshot["Sessions"]["value"], 120000)
-            cvr = safe_float(snapshot["Conversion_Rate"]["value"], 2.85) / 100.0 if snapshot["Conversion_Rate"]["value"] > 1 else safe_float(snapshot["Conversion_Rate"]["value"], 0.0285)
-            aov = safe_float(snapshot["AOV"]["value"], 185.0)
+            # Always recalculate Revenue = Sessions × (ConversionRate / 100) × AOV
+            sess = safe_float(snapshot.get("Sessions", {}).get("value"), 120000)
+            cvr_val = safe_float(snapshot.get("Conversion_Rate", {}).get("value"), 2.85)
+            cvr = cvr_val / 100.0 if cvr_val > 1 else cvr_val
+            aov = safe_float(snapshot.get("AOV", {}).get("value"), 185.0)
             snapshot["Revenue"]["value"] = round(sess * cvr * aov, 2)
+            
+            # Recalculate z-scores for ALL nodes based on simulated values
+            # This ensures tree status colors (CRITICAL/WARNING/HEALTHY) update live
+            for node_name in snapshot:
+                val = safe_float(snapshot[node_name].get("value"), 100)
+                base = safe_float(snapshot[node_name].get("baseline"), 100)
+                # Estimate standard deviation as ~5% of baseline for simulation
+                std_est = abs(base) * 0.05 + 1e-5
+                snapshot[node_name]["z_score"] = round((val - base) / std_est, 2)
 
         return self.decompose_anomaly(snapshot)
