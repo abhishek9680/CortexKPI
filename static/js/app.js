@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     runAnalysis(currentScenarioId);
   });
 
-  // Persona Switcher Listener — now re-renders content for each persona
+  // Persona Switcher Listener
   personaButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       personaButtons.forEach(b => b.classList.remove("active"));
@@ -49,7 +49,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.classList.add("persona-" + persona);
       currentPersona = persona;
 
-      // Re-render persona-sensitive components with the same data
       if (currentAnalysisData) {
         updateExecutiveBanner(currentAnalysisData.layer_4_narrative, persona);
         renderAllPanels(currentAnalysisData, currentScenarioId, persona);
@@ -98,21 +97,21 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Render Layer 3: Evidence Cards (persona-aware)
+    // Render Layer 3: Evidence Cards
     if (window.EvidenceComponent) {
       window.EvidenceComponent.render("evidence-container", data.layer_3_evidence, persona);
     }
 
-    // Render Layer 4: Narrative & Honest Detective (persona-aware)
+    // Render Layer 4: Narrative & Honest Detective with Mitigation / Reset Action
     if (window.NarrativeComponent) {
-      window.NarrativeComponent.render("narrative-container", data.layer_4_narrative, scenarioId, (scenId) => {
-        handleMitigationExecution(scenId);
+      window.NarrativeComponent.render("narrative-container", data.layer_4_narrative, scenarioId, (scenId, actionType) => {
+        handleMitigationExecution(scenId, actionType);
       }, persona, data.layer_2_causal_tree);
     }
   }
 
   /**
-   * Updates the executive summary banner with persona-specific messaging.
+   * Updates executive summary banner
    */
   function updateExecutiveBanner(narrative, persona) {
     const titleEl = document.getElementById("banner-headline");
@@ -124,14 +123,12 @@ document.addEventListener("DOMContentLoaded", () => {
     var hd = narrative.honest_detective || {};
 
     if (persona === "csuite") {
-      // C-Suite: Focus on financial impact and strategic headline
       if (titleEl) titleEl.innerText = narrative.headline;
       if (summaryEl) summaryEl.innerText = "Confidence: " + hd.confidence_pct + "% (" + hd.confidence_level + ")";
       if (impactEl) impactEl.innerText = narrative.financial_loss;
       if (badgeEl) badgeEl.innerHTML = "\uD83D\uDD34 CRITICAL ANOMALY DETECTED";
 
     } else if (persona === "devops") {
-      // DevOps: Focus on root cause and system status
       if (titleEl) titleEl.innerText = "\u26A0\uFE0F INCIDENT: " + narrative.headline;
       if (summaryEl) summaryEl.innerText = "Diagnostic Confidence: " + hd.confidence_pct + "% | Automated Triage Active";
       if (impactEl) {
@@ -141,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (badgeEl) badgeEl.innerHTML = "\u26A1 INCIDENT RESPONSE ACTIVE";
 
     } else if (persona === "bi") {
-      // BI Analyst: Focus on statistical significance
       if (titleEl) titleEl.innerText = "\uD83D\uDCC8 STATISTICAL ANALYSIS: " + narrative.headline;
       if (summaryEl) summaryEl.innerText = "Model Confidence: " + hd.confidence_pct + "% | P-value < 0.001 | " + hd.confidence_level;
       if (impactEl) {
@@ -172,16 +168,23 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch(err => console.error("What-If Simulation Error:", err));
   }
 
-  // Live Mitigation Execution Handler
-  function handleMitigationExecution(scenarioId) {
+  // Live Mitigation Execution / Reset Handler
+  function handleMitigationExecution(scenarioId, actionType) {
+    actionType = actionType || "ROLLBACK_DEPLOYMENT";
     fetch("/api/execute_mitigation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenario_id: scenarioId, action_type: "ROLLBACK_DEPLOYMENT" })
+      body: JSON.stringify({ scenario_id: scenarioId, action_type: actionType })
     })
     .then(res => res.json())
     .then(res => {
-      alert("\u2705 AUTOMATED ROLLBACK EXECUTED SUCCESSFULLY!\n\nIncident Ticket: " + res.mitigation_event.ticket_created + "\nAction: " + res.mitigation_event.action_taken + "\nStatus: " + res.mitigation_event.projected_recovery + "\n\nThe system is now restoring baseline metrics...");
+      const isRollback = actionType === "ROLLBACK_DEPLOYMENT";
+      const icon = isRollback ? "✅" : "↺";
+      const title = isRollback ? "AUTOMATED ROLLBACK EXECUTED" : "OUTAGE ANOMALY RE-INJECTED";
+
+      alert(`${icon} ${title}!\n\nTicket: ${res.mitigation_event.ticket_created}\nAction: ${res.mitigation_event.action_taken}\nStatus: ${res.mitigation_event.projected_recovery}`);
+      
+      // Re-run Analysis Pipeline to visually update dashboard metrics!
       runAnalysis(scenarioId);
       loadScenariosList();
     })

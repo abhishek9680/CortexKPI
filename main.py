@@ -220,25 +220,60 @@ def execute_mitigation(req: MitigationRequest):
     metrics_path = os.path.join(DATA_DIR, "metrics_timeseries.csv")
     df_metrics = pd.read_csv(metrics_path)
     
-    mask_pay = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Payment_Success_Rate')
-    df_metrics.loc[mask_pay, 'value'] = 98.2
-    
-    mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
-    df_metrics.loc[mask_cvr, 'value'] = 2.85
-    
-    mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
-    df_metrics.loc[mask_rev, 'value'] = 631800.0
+    is_rollback = req.action_type != "REINJECT_ANOMALY"
+
+    if req.scenario_id == "SCENARIO_2":
+        mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
+        df_metrics.loc[mask_cvr, 'value'] = 2.85 if is_rollback else 1.65
+
+        mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
+        df_metrics.loc[mask_rev, 'value'] = 631800.0 if is_rollback else 364320.0
+
+        mask_pay = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Payment_Success_Rate')
+        df_metrics.loc[mask_pay, 'value'] = 98.2 if is_rollback else 98.1
+
+    elif req.scenario_id == "SCENARIO_3":
+        mask_sess = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Sessions')
+        df_metrics.loc[mask_sess, 'value'] = 120000.0 if is_rollback else 177600.0
+
+        mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
+        df_metrics.loc[mask_cvr, 'value'] = 2.85 if is_rollback else 3.45
+
+        mask_aov = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'AOV')
+        df_metrics.loc[mask_aov, 'value'] = 185.0 if is_rollback else 195.0
+
+        mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
+        df_metrics.loc[mask_rev, 'value'] = 631800.0 if is_rollback else 1194762.0
+
+    else:
+        # Default / SCENARIO_1: Payment Success Rate Anomaly
+        mask_pay = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Payment_Success_Rate')
+        df_metrics.loc[mask_pay, 'value'] = 98.2 if is_rollback else 54.2
+
+        mask_cvr = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Conversion_Rate')
+        df_metrics.loc[mask_cvr, 'value'] = 2.85 if is_rollback else 1.12
+
+        mask_rev = (df_metrics['scenario_id'] == req.scenario_id) & (df_metrics['kpi_name'] == 'Revenue')
+        df_metrics.loc[mask_rev, 'value'] = 631800.0 if is_rollback else 244608.0
 
     df_metrics.to_csv(metrics_path, index=False)
+
+    if is_rollback:
+        action_msg = "Automated Deployment Rollback Executed (Restored healthy baseline metrics)."
+        status_msg = "Payment authorization and conversion rates restored to baseline. System Healthy."
+    else:
+        action_msg = "Scenario Anomaly Re-injected (Reset outage state for demonstration)."
+        status_msg = "Original incident anomaly re-applied. System returned to critical outage state."
 
     return {
         "status": "SUCCESS",
         "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "action_type": req.action_type,
         "mitigation_event": {
             "ticket_created": f"INC-{pd.Timestamp.now().strftime('%Y')}-8890",
-            "action_taken": "Automated Deployment Rollback Executed for DEPLOY-8492 (Stripe 3DS SDK v3.2.0 -> v3.1.8)",
-            "slack_notified": "Posted resolution alert to #war-room-checkout",
-            "projected_recovery": "Payment authorization restored to 98.2% baseline. System Healthy."
+            "action_taken": action_msg,
+            "slack_notified": f"Posted update to #war-room ({'Resolution' if is_rollback else 'Outage Simulation'})",
+            "projected_recovery": status_msg
         }
     }
 

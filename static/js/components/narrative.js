@@ -1,6 +1,6 @@
 window.NarrativeComponent = {
   /**
-   * Renders Layer 4 with persona-aware content.
+   * Renders Layer 4 with persona-aware content and dynamic Mitigation / Reset toggle button.
    * @param {string} persona - 'csuite', 'devops', or 'bi'
    * @param {object} causalTree - Layer 2 causal tree data for BI stats
    */
@@ -14,6 +14,11 @@ window.NarrativeComponent = {
     var isHighConf = confPct >= 80;
 
     var html = "";
+
+    // Check if scenario is currently in a resolved/healthy state
+    var isResolved = narrativeData.headline.includes("surged +0.0%") || 
+                     narrativeData.headline.includes("growth (+0.0%)") || 
+                     !(causalTree && causalTree.root_cause_leaf);
 
     // ============================
     // PERSONA CONTEXT BAR
@@ -37,17 +42,17 @@ window.NarrativeComponent = {
     // ============================
     if (persona === "devops") {
       var tree = (causalTree && causalTree.tree) ? causalTree.tree : {};
-      var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "Unknown";
+      var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "Resolved / Baseline";
       var rootData = tree[rootCause] || {};
       var rootZ = (rootData.z_score || 0).toFixed(1);
       var rootVal = rootData.value || 0;
       var rootBase = rootData.baseline || 0;
 
       html += '<div class="devops-log-block">' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-crit">[CRITICAL]</span> Anomaly detector triggered for ' + rootCause.replace(/_/g, " ") + '</span>' +
+        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="' + (isResolved ? 'log-level-info' : 'log-level-crit') + '">[' + (isResolved ? 'HEALTHY' : 'CRITICAL') + ']</span> System State: ' + (isResolved ? 'Baseline Healthy' : 'Anomaly Triggered for ' + rootCause.replace(/_/g, " ")) + '</span>' +
         '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-warn">[TRIAGE]</span> Z-score=' + rootZ + ' | Current=' + Number(rootVal).toLocaleString() + ' | Baseline=' + Number(rootBase).toLocaleString() + '</span>' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Causal decomposition: Revenue \u2192 ' + (causalTree.failing_path || []).join(" \u2192 ") + '</span>' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Confidence score: ' + confPct + '% | Model: Bayesian + IsolationForest + TF-IDF RAG</span>' +
+        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Causal path: Revenue \u2192 ' + (causalTree.failing_path || []).join(" \u2192 ") + '</span>' +
+        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Confidence score: ' + confPct + '% | Engine: Bayesian + IsolationForest + RAG</span>' +
         '</div>';
     }
 
@@ -57,8 +62,7 @@ window.NarrativeComponent = {
     if (persona === "bi") {
       var tree = (causalTree && causalTree.tree) ? causalTree.tree : {};
       var revNode = tree["Revenue"] || {};
-      var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "N/A";
-      var rootData = tree[rootCause] || {};
+      var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "None (Healthy)";
       var critCount = 0;
       var warnCount = 0;
       var healthyCount = 0;
@@ -102,7 +106,7 @@ window.NarrativeComponent = {
     html += '<h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">' + headlinePrefix + narrativeData.headline + '</h3>';
 
     // ============================
-    // EXECUTIVE SUMMARY (persona-adapted)
+    // EXECUTIVE SUMMARY
     // ============================
     html += '<p id="executive-narrative-text" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">' +
       narrativeData.executive_summary +
@@ -119,7 +123,6 @@ window.NarrativeComponent = {
       protocolLabel +
     '</div>';
 
-    // Pillar labels adapt to persona
     var knownLabel = persona === "devops" ? "\u2705 Confirmed Indicators" : persona === "bi" ? "\u2705 Statistically Significant" : "\u2705 Corroborated Facts";
     var gapLabel = persona === "devops" ? "\u26A0\uFE0F Missing Telemetry" : persona === "bi" ? "\u26A0\uFE0F Data Quality Gaps" : "\u26A0\uFE0F Telemetry Gaps";
     var ruledLabel = persona === "devops" ? "\u274C Services Cleared" : persona === "bi" ? "\u274C Hypotheses Rejected" : "\u274C Ruled Out";
@@ -145,15 +148,28 @@ window.NarrativeComponent = {
     '</div>';
 
     // ============================
-    // MITIGATION BUTTON (persona-adapted label)
+    // DYNAMIC MITIGATION / RESET BUTTON
     // ============================
-    var mitigateLabel = "\uD83C\uDFAE Trigger Automated SOP Rollback";
-    if (persona === "devops") mitigateLabel = "\uD83D\uDE80 Execute Hotfix Rollback & Restart Service";
-    else if (persona === "bi") mitigateLabel = "\uD83D\uDCCA Run Controlled A/B Recovery Experiment";
+    var actionType = isResolved ? "REINJECT_ANOMALY" : "ROLLBACK_DEPLOYMENT";
+    var buttonHtml = "";
 
-    html += '<div style="margin-top: 14px; text-align: right;">' +
-      '<button id="execute-mitigation-btn" class="btn btn-primary">' + mitigateLabel + '</button>' +
-    '</div>';
+    if (isResolved) {
+      // Scenario is Healthy/Resolved -> Render Reset Anomaly Button
+      buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-outline" data-action="REINJECT_ANOMALY" style="border-color: var(--warning-amber); color: var(--warning-amber); font-weight: 700; background: rgba(245, 158, 11, 0.1);">' +
+        '\u21BA Reset Outage State (Re-Inject Anomaly)' +
+      '</button>';
+    } else {
+      // Scenario is Anomalous -> Render Trigger Automated Rollback Button
+      var mitigateLabel = "\uD83C\uDFAE Trigger Automated SOP Rollback";
+      if (persona === "devops") mitigateLabel = "\uD83D\uDE80 Execute Hotfix Rollback & Restart Service";
+      else if (persona === "bi") mitigateLabel = "\uD83D\uDCCA Run Controlled A/B Recovery Experiment";
+
+      buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-primary" data-action="ROLLBACK_DEPLOYMENT">' +
+        mitigateLabel +
+      '</button>';
+    }
+
+    html += '<div style="margin-top: 14px; text-align: right;">' + buttonHtml + '</div>';
 
     container.innerHTML = html;
 
@@ -181,13 +197,14 @@ window.NarrativeComponent = {
       });
     }
 
-    // Mitigation Action Trigger
+    // Mitigation / Reset Action Trigger Listener
     var mitBtn = document.getElementById("execute-mitigation-btn");
     if (mitBtn && onMitigateTrigger) {
       mitBtn.addEventListener("click", function() {
+        var act = mitBtn.getAttribute("data-action") || actionType;
         mitBtn.disabled = true;
-        mitBtn.innerText = "\u26A1 Executing...";
-        onMitigateTrigger(scenarioId);
+        mitBtn.innerText = act === "REINJECT_ANOMALY" ? "\u21BA Resetting Anomaly..." : "\u26A1 Executing Rollback...";
+        onMitigateTrigger(scenarioId, act);
       });
     }
   }
