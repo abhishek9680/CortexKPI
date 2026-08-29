@@ -3,10 +3,17 @@ window.TreeComponent = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const tree = causalData.tree || {};
-    const failingPath = causalData.failing_path || [];
+    this.currentCausalData = JSON.parse(JSON.stringify(causalData));
+    this.containerId = containerId;
+    this.onWhatIfChange = onWhatIfChange;
 
-    // SVG Node Coordinates
+    this._drawSVG(container);
+  },
+
+  _drawSVG: function(container) {
+    const tree = this.currentCausalData.tree || {};
+    const failingPath = this.currentCausalData.failing_path || [];
+
     const nodes = {
       Revenue: { x: 260, y: 40 },
       Sessions: { x: 90, y: 150 },
@@ -29,9 +36,9 @@ window.TreeComponent = {
       const fromPos = nodes[edge.from];
       const toPos = nodes[edge.to];
       const isFailing = failingPath.includes(edge.from) && failingPath.includes(edge.to);
-      const strokeColor = isFailing ? '#EF4444' : 'rgba(255, 255, 255, 0.15)';
+      const strokeColor = isFailing ? '#EF4444' : '#10B981';
       const strokeWidth = isFailing ? 3 : 1.5;
-      const strokeDash = isFailing ? 'stroke-dasharray="6" animation="pulse 1.5s infinite"' : '';
+      const strokeDash = isFailing ? 'stroke-dasharray="6"' : '';
 
       svgHtml += `<line x1="${fromPos.x}" y1="${fromPos.y + 35}" x2="${toPos.x}" y2="${toPos.y - 5}" 
         stroke="${strokeColor}" stroke-width="${strokeWidth}" ${strokeDash} />`;
@@ -45,27 +52,18 @@ window.TreeComponent = {
       const isCritical = nData.status === 'CRITICAL_FAIL';
       const isWarning = nData.status === 'WARNING';
       const borderColor = isCritical ? '#EF4444' : (isWarning ? '#F59E0B' : '#10B981');
-      const badgeBg = isCritical ? 'rgba(239,68,68,0.2)' : (isWarning ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)');
       const statusIcon = isCritical ? '🔴' : (isWarning ? '🟡' : '🟢');
 
       svgHtml += `
         <g transform="translate(${pos.x - 70}, ${pos.y - 10})">
-          <!-- Card Container -->
-          <rect width="140" height="65" rx="8" ry="8" fill="rgba(17, 24, 39, 0.9)" stroke="${borderColor}" stroke-width="${isCritical ? 2 : 1}" />
-          
-          <!-- Node Label -->
-          <text x="10" y="18" fill="#F9FAFB" font-size="10.5" font-family="Inter" font-weight="700">${nData.label.split(' ')[0]}</text>
-          
-          <!-- Status Badge -->
+          <rect width="140" height="65" rx="8" ry="8" fill="rgba(17, 24, 39, 0.95)" stroke="${borderColor}" stroke-width="${isCritical ? 2 : 1.5}" />
+          <text x="10" y="18" fill="#F9FAFB" font-size="10.5" font-family="Inter" font-weight="700">${nData.label ? nData.label.split(' ')[0] : key}</text>
           <text x="125" y="18" font-size="10" text-anchor="end">${statusIcon}</text>
-          
-          <!-- Value & Delta -->
           <text x="10" y="38" fill="#FFFFFF" font-size="12" font-family="JetBrains Mono" font-weight="700">
-            ${nData.unit === 'USD' ? '$' : ''}${Number(nData.value).toLocaleString()}${nData.unit === '%' ? '%' : ''}
+            ${nData.unit === 'USD' || key === 'Revenue' || key === 'AOV' ? '$' : ''}${Number(nData.value).toLocaleString()}${nData.unit === '%' || key.includes('Rate') ? '%' : ''}
           </text>
-          
           <text x="10" y="54" fill="${nData.delta_pct < 0 ? '#EF4444' : '#10B981'}" font-size="9.5" font-family="JetBrains Mono" font-weight="600">
-            ${nData.delta_pct >= 0 ? '+' : ''}${nData.delta_pct}% (Z: ${nData.z_score.toFixed(1)})
+            ${nData.delta_pct >= 0 ? '+' : ''}${nData.delta_pct}% (Z: ${nData.z_score ? nData.z_score.toFixed(1) : 0})
           </text>
         </g>
       `;
@@ -73,8 +71,7 @@ window.TreeComponent = {
 
     svgHtml += `</svg>`;
 
-    // What-If Simulator HTML Controls
-    const rootLeaf = causalData.root_cause_leaf || "Payment_Success_Rate";
+    const rootLeaf = this.currentCausalData.root_cause_leaf || "Payment_Success_Rate";
     const leafVal = tree[rootLeaf] ? tree[rootLeaf].value : 54.2;
 
     const simulatorHtml = `
@@ -85,21 +82,29 @@ window.TreeComponent = {
         </label>
         <input type="range" min="10" max="100" value="${leafVal}" step="1" class="slider-input" id="whatif-slider">
         <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
-          Adjust <strong>${rootLeaf}</strong> to simulate instant parent node revenue graph recovery.
+          Drag <strong>${rootLeaf}</strong> slider to dynamically simulate real-time parent graph recovery.
         </p>
       </div>
     `;
 
     container.innerHTML = svgHtml + simulatorHtml;
 
-    // Attach slider event listener
     const slider = document.getElementById("whatif-slider");
     if (slider) {
       slider.addEventListener("input", (e) => {
         const val = parseFloat(e.target.value);
         document.getElementById("simulator-val-label").innerText = val + "%";
-        if (onWhatIfChange) onWhatIfChange(rootLeaf, val);
+        if (this.onWhatIfChange) this.onWhatIfChange(rootLeaf, val);
       });
+    }
+  },
+
+  updateNodeValues: function(updatedTreeData) {
+    if (!updatedTreeData || !updatedTreeData.tree) return;
+    this.currentCausalData = updatedTreeData;
+    const container = document.getElementById(this.containerId);
+    if (container) {
+      this._drawSVG(container);
     }
   }
 };

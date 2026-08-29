@@ -8,24 +8,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const personaButtons = document.querySelectorAll(".persona-btn");
   const pdfExportBtn = document.getElementById("pdf-export-btn");
 
-  // 1. Fetch Scenarios
-  fetch("/api/scenarios")
-    .then(res => res.json())
-    .then(data => {
-      scenarioSelect.innerHTML = "";
-      data.scenarios.forEach(scen => {
-        const opt = document.createElement("option");
-        opt.value = scen.id;
-        opt.innerText = scen.name;
-        scenarioSelect.appendChild(opt);
+  // 1. Fetch Scenarios dynamically
+  function loadScenariosList() {
+    fetch("/api/scenarios")
+      .then(res => res.json())
+      .then(data => {
+        scenarioSelect.innerHTML = "";
+        data.scenarios.forEach(scen => {
+          const opt = document.createElement("option");
+          opt.value = scen.id;
+          opt.innerText = scen.name;
+          scenarioSelect.appendChild(opt);
+        });
+        scenarioSelect.value = currentScenarioId;
+        runAnalysis(currentScenarioId);
+      })
+      .catch(err => {
+        console.error("Error fetching scenarios:", err);
+        runAnalysis(currentScenarioId);
       });
-      scenarioSelect.value = currentScenarioId;
-      runAnalysis(currentScenarioId);
-    })
-    .catch(err => {
-      console.error("Error fetching scenarios:", err);
-      runAnalysis(currentScenarioId);
-    });
+  }
+
+  loadScenariosList();
 
   // Scenario Switch Listener
   scenarioSelect.addEventListener("change", (e) => {
@@ -105,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Live What-If Counterfactual Simulation Handler
   function handleWhatIfSimulation(scenarioId, nodeAdjusted, newValue) {
     fetch("/api/simulate_whatif", {
       method: "POST",
@@ -113,14 +118,21 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .then(res => res.json())
     .then(simResult => {
+      // 1. Update Executive Banner Financial Number
       const impactEl = document.getElementById("banner-impact");
       if (impactEl) {
         impactEl.innerText = `$${simResult.projected_revenue.toLocaleString()}`;
+      }
+
+      // 2. Dynamically Update Tree SVG Node Values & Edges live on screen!
+      if (window.TreeComponent && simResult.updated_causal_tree) {
+        window.TreeComponent.updateNodeValues(simResult.updated_causal_tree);
       }
     })
     .catch(err => console.error("What-If Simulation Error:", err));
   }
 
+  // Live Mitigation Execution Handler
   function handleMitigationExecution(scenarioId) {
     fetch("/api/execute_mitigation", {
       method: "POST",
@@ -129,12 +141,11 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .then(res => res.json())
     .then(res => {
-      alert(`✅ AUTOMATED MITIGATION EXECUTED SUCCESSFULLY!\n\nTicket: ${res.mitigation_event.ticket_created}\nAction: ${res.mitigation_event.action_taken}\nStatus: ${res.mitigation_event.projected_recovery}`);
-      const btn = document.getElementById("execute-mitigation-btn");
-      if (btn) {
-        btn.innerText = "✅ Rollback Triggered (INC-2026-8890)";
-        btn.style.background = "#10B981";
-      }
+      alert(`✅ AUTOMATED ROLLBACK EXECUTED SUCCESSFULLY!\n\nIncident Ticket: ${res.mitigation_event.ticket_created}\nAction: ${res.mitigation_event.action_taken}\nStatus: ${res.mitigation_event.projected_recovery}\n\nThe system is now restoring baseline metrics...`);
+      
+      // Re-run Analysis Pipeline to visually update dashboard metrics to GREEN HEALTHY STATE!
+      runAnalysis(scenarioId);
+      loadScenariosList();
     })
     .catch(err => console.error("Mitigation Execution Error:", err));
   }

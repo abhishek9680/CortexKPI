@@ -44,10 +44,10 @@ class HonestDetectiveNarrativeML:
         root_cause_node = causal_tree.get("root_cause_leaf") or "Conversion_Rate"
         
         rev_node = tree.get("Revenue", {"value": 0, "baseline": 0, "z_score": 0, "delta_pct": 0})
-        rev_val = rev_node.get("value", 0)
-        rev_base = rev_node.get("baseline", 0)
-        rev_delta_pct = rev_node.get("delta_pct", 0)
-        rev_z = rev_node.get("z_score", 0)
+        rev_val = float(rev_node.get("value", 0))
+        rev_base = float(rev_node.get("baseline", 0))
+        rev_delta_pct = float(rev_node.get("delta_pct", 0))
+        rev_z = float(rev_node.get("z_score", 0))
 
         # Calculate Financial Loss/Gain Dynamically
         loss_val = rev_base - rev_val
@@ -64,16 +64,17 @@ class HonestDetectiveNarrativeML:
         # Extract Root Cause Info Dynamically
         root_data = tree.get(root_cause_node, {"label": root_cause_node, "value": 0, "baseline": 0, "z_score": 0, "delta_pct": 0})
         root_label = root_data.get("label", root_cause_node).split(" ")[0]
-        root_z = root_data.get("z_score", 0)
-        root_delta = root_data.get("delta_pct", 0)
-        root_val = root_data.get("value", 0)
-        root_base = root_data.get("baseline", 0)
+        root_z = float(root_data.get("z_score", 0))
+        root_delta = float(root_data.get("delta_pct", 0))
+        root_val = float(root_data.get("value", 0))
+        root_base = float(root_data.get("baseline", 0))
 
         # Extract Top TF-IDF Evidence Item Dynamically
         top_evidence = evidence_list[0] if (evidence_list and len(evidence_list) > 0) else None
         top_evidence_title = top_evidence.get("title", "Operational Event") if top_evidence else "system anomaly"
         top_evidence_source = top_evidence.get("source", "System") if top_evidence else "Log Stream"
         top_evidence_id = top_evidence.get("id", "EVT-00") if top_evidence else ""
+        top_evidence_score = top_evidence.get("relevance_score", 0.55) if top_evidence else 0.55
 
         # Dynamic Headline Construction
         if loss_val > 0:
@@ -115,13 +116,13 @@ class HonestDetectiveNarrativeML:
         healthy_nodes = [k for k, v in tree.items() if v.get("status") == "HEALTHY" and k != "Revenue"]
         for hn in healthy_nodes:
             hn_label = tree[hn].get("label", hn).split(" ")[0]
-            hn_z = tree[hn].get("z_score", 0)
-            hn_delta = tree[hn].get("delta_pct", 0)
+            hn_z = float(tree[hn].get("z_score", 0))
+            hn_delta = float(tree[hn].get("delta_pct", 0))
             ruled_out.append(f"Ruled out {hn_label} failure: Metric remained stable at {hn_delta:+.1f}% (Z-score: {hn_z:.2f}).")
 
         # Populate Telemetry Gaps dynamically based on confidence
         if not is_high_confidence:
-            telemetry_gaps.append(f"Ambiguity detected: TF-IDF log match score ({int(top_evidence_score * 100 if 'top_evidence_score' in locals() else 55)}%) below 80% threshold.")
+            telemetry_gaps.append(f"Ambiguity detected: TF-IDF log match score ({int(top_evidence_score * 100)}%) below 80% threshold.")
             telemetry_gaps.append("Regional sub-gateway latency telemetry logs pending verification.")
             prescribed_actions.append(f"DIAGNOSTIC MICRO-EXPERIMENT: Route 5% traffic to legacy configuration for {root_label} before scaling intervention.")
             prescribed_actions.append("MONITOR: Continuously monitor metric recovery over next 2-hour window.")
