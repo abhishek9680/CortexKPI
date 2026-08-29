@@ -80,7 +80,13 @@ window.TreeComponent = {
     if (!svgArea) return;
 
     const tree = this.currentCausalData.tree || {};
-    const failingPath = this.currentCausalData.failing_path || [];
+    var failingPath = this.currentCausalData.failing_path || [];
+    var rootCause = this.currentCausalData.root_cause_leaf;
+
+    // If root cause metric is no longer in CRITICAL_FAIL state (e.g. simulated recovery), turn edges green!
+    if (rootCause && tree[rootCause] && tree[rootCause].status !== 'CRITICAL_FAIL') {
+      failingPath = [];
+    }
 
     const nodes = {
       Revenue: { x: 260, y: 40 },

@@ -165,12 +165,20 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .then(res => res.json())
     .then(simResult => {
+      // 1. Update Executive Banner Financial Number
       const impactEl = document.getElementById("banner-impact");
       if (impactEl) {
-        impactEl.innerText = "$" + simResult.projected_revenue.toLocaleString();
+        impactEl.innerText = "$" + Number(simResult.projected_revenue).toLocaleString(undefined, {maximumFractionDigits: 2});
       }
+
+      // 2. Dynamically Update Tree SVG Node Values & Edges live on screen!
       if (window.TreeComponent && simResult.updated_causal_tree) {
         window.TreeComponent.updateNodeValues(simResult.updated_causal_tree);
+      }
+
+      // 3. Dynamically Update Layer 1 Time Series Line Graph live on screen!
+      if (window.ChartComponent) {
+        window.ChartComponent.updateSimulatedPoint(simResult.projected_revenue);
       }
     })
     .catch(err => console.error("What-If Simulation Error:", err));
