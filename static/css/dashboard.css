@@ -250,10 +250,174 @@
   color: var(--text-muted);
 }
 
-/* Persona View Controls */
-.persona-devops-only, .persona-bi-only {
+/* =====================================================
+   PERSONA-AWARE VIEW SYSTEM
+   Each persona gets different visual emphasis, panel
+   ordering, accent colors, and content visibility.
+   ===================================================== */
+
+/* Base visibility toggles */
+.persona-csuite-only, .persona-devops-only, .persona-bi-only {
   display: none;
 }
-
+body.persona-csuite .persona-csuite-only { display: block; }
 body.persona-devops .persona-devops-only { display: block; }
 body.persona-bi .persona-bi-only { display: block; }
+
+/* Persona transition */
+.panel-card, .executive-banner {
+  transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+
+/* ---- C-SUITE PERSONA ---- */
+/* Focus: Financial impact, executive summary, high-level narrative */
+body.persona-csuite .executive-banner {
+  border-left-color: var(--anomaly-rose);
+}
+body.persona-csuite .executive-banner .impact-value {
+  font-size: 1.6rem;
+}
+
+/* ---- DEVOPS PERSONA ---- */
+/* Focus: Technical root cause, deployments, system alerts */
+body.persona-devops {
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.08) 0%, transparent 40%);
+}
+
+body.persona-devops .executive-banner {
+  border-left-color: var(--health-green);
+}
+
+body.persona-devops .persona-btn.active {
+  background: var(--health-green);
+}
+
+body.persona-devops .badge-rose {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--health-green);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* ---- BI ANALYST PERSONA ---- */
+/* Focus: Statistical analysis, data quality, all metrics equally */
+body.persona-bi {
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.1) 0%, transparent 40%);
+}
+
+body.persona-bi .executive-banner {
+  border-left-color: var(--accent-purple);
+}
+
+body.persona-bi .persona-btn.active {
+  background: var(--accent-purple);
+}
+
+body.persona-bi .badge-rose {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-purple);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* Persona-specific content section styling */
+.persona-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-glass);
+}
+
+.persona-context-bar.ctx-csuite {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+  color: var(--anomaly-rose);
+}
+
+.persona-context-bar.ctx-devops {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.15);
+  color: var(--health-green);
+}
+
+.persona-context-bar.ctx-bi {
+  background: rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.15);
+  color: var(--accent-purple);
+}
+
+/* Stats grid for BI Analyst */
+.bi-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bi-stat-card {
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  text-align: center;
+}
+
+.bi-stat-card .stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.bi-stat-card .stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  margin-top: 2px;
+}
+
+/* DevOps terminal-style log block */
+.devops-log-block {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--health-green);
+  line-height: 1.6;
+  margin-bottom: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.devops-log-block .log-line {
+  display: block;
+}
+
+.devops-log-block .log-ts {
+  color: var(--text-dim);
+}
+
+.devops-log-block .log-level-crit {
+  color: var(--anomaly-rose);
+  font-weight: 700;
+}
+
+.devops-log-block .log-level-warn {
+  color: var(--warning-amber);
+}
+
+.devops-log-block .log-level-info {
+  color: var(--health-green);
+}
+
