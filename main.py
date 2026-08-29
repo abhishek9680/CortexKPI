@@ -77,10 +77,13 @@ def get_scenarios():
         if reg.lower() == "nan":
             reg = "GLOBAL"
         
-        rev_rows = df_s[df_s['kpi_name'] == 'Revenue'].sort_values('timestamp')
+        df_reg = df_metrics[df_metrics['region'] == reg].sort_values('timestamp')
+        rev_rows = df_reg[df_reg['kpi_name'] == 'Revenue'].sort_values('timestamp')
         if not rev_rows.empty:
             proc = anomaly_detector.analyze_timeseries(rev_rows)
-            min_z = safe_float(proc['z_score'].min(), 0.0)
+            scen_proc = proc[proc['scenario_id'] == sid]
+            eval_df = scen_proc if not scen_proc.empty else proc
+            min_z = safe_float(eval_df['z_score'].min(), 0.0)
             
             if min_z <= -2.0:
                 type_tag = "CRITICAL_FAILURE"
@@ -113,15 +116,23 @@ def analyze_scenario(req: AnalyzeRequest):
     if df_scen.empty:
         df_scen = df_metrics[df_metrics['scenario_id'] == 'SCENARIO_1']
 
-    df_kpi = df_scen[df_scen['kpi_name'] == req.kpi_name].sort_values('timestamp')
+    reg_series = df_scen['region'].dropna()
+    reg = str(reg_series.iloc[0]) if not reg_series.empty else "GLOBAL"
+
+    df_reg = df_metrics[df_metrics['region'] == reg].sort_values('timestamp')
+
+    df_kpi = df_reg[df_reg['kpi_name'] == req.kpi_name].sort_values('timestamp')
     if df_kpi.empty:
         df_kpi = df_metrics[df_metrics['kpi_name'] == req.kpi_name].sort_values('timestamp')
 
-    # LAYER 1: Bayesian Dynamic Baselining ML
+    # LAYER 1: Bayesian Dynamic Baselining ML on Regional Time-Series
     df_processed = anomaly_detector.analyze_timeseries(df_kpi)
 
+    scen_proc = df_processed[df_processed['scenario_id'] == req.scenario_id]
+    eval_proc = scen_proc if not scen_proc.empty else df_processed
+
     timeseries_data = []
-    for idx, row in df_processed.iterrows():
+    for idx, row in eval_proc.iterrows():
         timeseries_data.append({
             "timestamp": str(row['timestamp']),
             "value": safe_float(row['value']),
@@ -132,14 +143,15 @@ def analyze_scenario(req: AnalyzeRequest):
             "status": str(row['status'])
         })
 
-    peak_row = df_processed.loc[df_processed['z_score'].abs().idxmax()] if not df_processed.empty else df_processed.iloc[-1]
+    # Pick the most significant anomaly breach point inside scenario window
+    peak_row = eval_proc.loc[eval_proc['z_score'].abs().idxmax()] if not eval_proc.empty else df_processed.iloc[-1]
     peak_date = str(peak_row['timestamp'])
 
-    available_kpis = df_scen['kpi_name'].unique().tolist()
+    available_kpis = df_metrics['kpi_name'].unique().tolist()
     metric_snapshot = {}
 
     for kpi in available_kpis:
-        kpi_rows = df_scen[df_scen['kpi_name'] == kpi].sort_values('timestamp')
+        kpi_rows = df_reg[df_reg['kpi_name'] == kpi].sort_values('timestamp')
         if not kpi_rows.empty:
             kpi_proc = anomaly_detector.analyze_timeseries(kpi_rows)
             match_row = kpi_proc[kpi_proc['timestamp'] == peak_date]
@@ -162,10 +174,9 @@ def analyze_scenario(req: AnalyzeRequest):
     causal_results = causal_tree_decomposer.decompose_anomaly(metric_snapshot)
 
     # LAYER 3: Multimodal RAG Log Vectorization ML
-    reg_s = df_scen['region'].dropna()
     anomaly_context = {
         "kpi": causal_results.get("root_cause_leaf", "Conversion_Rate"),
-        "region": str(reg_s.iloc[0]) if not reg_s.empty else "GLOBAL",
+        "region": reg,
         "timestamp": peak_date
     }
     evidence_items = log_rag_vectorizer.search_corroborating_evidence(anomaly_context, df_jira, df_zendesk, df_slack)

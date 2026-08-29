@@ -56,6 +56,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Reset Outage Header Button Listener
+  const resetOutageBtn = document.getElementById("reset-outage-btn");
+  if (resetOutageBtn) {
+    resetOutageBtn.addEventListener("click", () => {
+      handleMitigationExecution(currentScenarioId, "REINJECT_ANOMALY");
+    });
+  }
+
   // PDF Export Listener
   if (pdfExportBtn) {
     pdfExportBtn.addEventListener("click", () => {
