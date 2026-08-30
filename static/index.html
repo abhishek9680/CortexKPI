@@ -16,6 +16,56 @@
   <!-- Styles -->
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="/static/css/dashboard.css">
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 28px;
+      width: 90%;
+      max-width: 520px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .file-drop-zone {
+      border: 2px dashed #3b82f6;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      background: rgba(59, 130, 246, 0.05);
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+  </style>
 </head>
 <body class="persona-csuite">
 
@@ -42,6 +92,11 @@
         <option value="SCENARIO_1">Loading Scenarios...</option>
       </select>
 
+      <!-- Upload Custom Enterprise CSV -->
+      <button id="upload-data-btn" class="btn btn-outline" style="border-color: #3b82f6; color: #60a5fa;">
+        📁 Ingest Dataset
+      </button>
+
       <!-- Reset Outage Button -->
       <button id="reset-outage-btn" class="btn btn-outline" style="border-color: var(--warning-amber); color: var(--warning-amber); font-weight: 700; background: rgba(245, 158, 11, 0.1);">
         ↺ Reset Outage
@@ -58,7 +113,7 @@
   <section class="glass-panel executive-banner">
     <div class="banner-title-group">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-        <span class="badge badge-rose pulse-anomaly">🔴 CRITICAL ANOMALY DETECTED</span>
+        <span id="banner-badge" class="badge badge-rose pulse-anomaly">🔴 CRITICAL ANOMALY DETECTED</span>
         <span id="banner-summary" style="font-size: 0.8rem; color: var(--text-muted);">Confidence: 96% (HIGH_CONFIDENCE)</span>
       </div>
       <h2 id="banner-headline">APAC Revenue dropped 41.8% due to Stripe 3DS Gateway OTP failure</h2>
@@ -79,7 +134,12 @@
         <div class="panel-title">
           <span>📈 Layer 1: Bayesian Anomaly Detection</span>
         </div>
-        <span class="badge badge-blue">Rolling 28-Day Baseline</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="play-sim-btn" class="btn btn-outline" style="padding: 3px 8px; font-size: 0.7rem; border-color: #10b981; color: #34d399;">
+            ▶ Live Replay
+          </button>
+          <span class="badge badge-blue">Dynamic 28-Day Baseline</span>
+        </div>
       </div>
       <div class="panel-body" style="min-height: 280px; position: relative;">
         <canvas id="timeseries-canvas"></canvas>
@@ -92,7 +152,12 @@
         <div class="panel-title">
           <span>🕵️ Layer 4: Executive Narrative & Honest Detective</span>
         </div>
-        <span class="badge badge-green">Epistemic Safeguards Active</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="llm-narrative-btn" class="btn btn-outline" style="padding: 3px 8px; font-size: 0.7rem; border-color: #8b5cf6; color: #c084fc;">
+            🤖 AI Briefing (Qwen / LLM)
+          </button>
+          <span class="badge badge-green">Epistemic Safeguards Active</span>
+        </div>
       </div>
       <div class="panel-body" id="narrative-container">
         <!-- Rendered via JS -->
@@ -126,6 +191,33 @@
     </section>
 
   </main>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.15rem; color: #f8fafc;">📁 Ingest Enterprise Data</h3>
+        <button id="modal-close-btn" class="modal-close">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0; margin-bottom: 16px;">
+        Upload your custom metric time-series CSV (format: <code>timestamp, scenario_id, kpi_name, value, unit, region</code>) and optional logs.
+      </p>
+      
+      <form id="upload-form">
+        <div class="file-drop-zone" id="drop-zone">
+          <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
+          <div style="font-weight: 600; color: #e2e8f0;">Select Metrics CSV File</div>
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Click or drag file here</div>
+          <input type="file" id="metrics-file-input" name="metrics_file" accept=".csv" required style="display: none;">
+        </div>
+        <div id="selected-filename" style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 16px; word-break: break-all;"></div>
+        
+        <button type="submit" id="submit-upload-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">
+          ⚡ Ingest & Run Full 4-Layer ML Pipeline
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- JS Component Scripts -->
   <script src="/static/js/components/chart.js"></script>
