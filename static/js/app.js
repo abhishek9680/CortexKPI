@@ -292,30 +292,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!narrative) return;
     var hd = narrative.honest_detective || {};
+    var isSurge = (narrative.financial_loss && narrative.financial_loss.includes("+")) || 
+                  (narrative.headline && narrative.headline.includes("surged"));
 
     if (persona === "csuite") {
       if (titleEl) titleEl.innerText = narrative.headline;
       if (summaryEl) summaryEl.innerText = "Confidence: " + hd.confidence_pct + "% (" + hd.confidence_level + ")";
-      if (impactEl) impactEl.innerText = narrative.financial_loss;
-      if (badgeEl) badgeEl.innerHTML = "🔴 CRITICAL ANOMALY DETECTED";
+      if (impactEl) {
+        impactEl.innerText = narrative.financial_loss;
+        impactEl.style.color = isSurge ? "var(--health-green)" : "var(--anomaly-rose)";
+      }
+      if (badgeEl) {
+        badgeEl.innerHTML = isSurge ? "🟢 POSITIVE GROWTH SURGE DETECTED" : "🔴 CRITICAL ANOMALY DETECTED";
+        badgeEl.className = isSurge ? "badge badge-green" : "badge badge-rose pulse-anomaly";
+      }
 
     } else if (persona === "devops") {
-      if (titleEl) titleEl.innerText = "⚠️ INCIDENT: " + narrative.headline;
+      if (titleEl) titleEl.innerText = (isSurge ? "📈 SURGE: " : "⚠️ INCIDENT: ") + narrative.headline;
       if (summaryEl) summaryEl.innerText = "Diagnostic Confidence: " + hd.confidence_pct + "% | Automated Triage Active";
       if (impactEl) {
         impactEl.innerText = narrative.financial_loss;
         impactEl.style.color = "var(--health-green)";
       }
-      if (badgeEl) badgeEl.innerHTML = "⚡ INCIDENT RESPONSE ACTIVE";
+      if (badgeEl) {
+        badgeEl.innerHTML = isSurge ? "⚡ TRAFFIC SURGE ACTIVE" : "⚡ INCIDENT RESPONSE ACTIVE";
+        badgeEl.className = isSurge ? "badge badge-green" : "badge badge-rose pulse-anomaly";
+      }
 
     } else if (persona === "bi") {
       if (titleEl) titleEl.innerText = "📈 STATISTICAL ANALYSIS: " + narrative.headline;
       if (summaryEl) summaryEl.innerText = "Model Confidence: " + hd.confidence_pct + "% | P-value < 0.001 | " + hd.confidence_level;
       if (impactEl) {
         impactEl.innerText = narrative.financial_loss;
-        impactEl.style.color = "var(--accent-purple)";
+        impactEl.style.color = isSurge ? "var(--health-green)" : "var(--accent-purple)";
       }
-      if (badgeEl) badgeEl.innerHTML = "📊 ANOMALY SIGNIFICANCE: HIGH";
+      if (badgeEl) {
+        badgeEl.innerHTML = isSurge ? "📊 POSITIVE BREAKOUT: Z > +2.0" : "📊 ANOMALY SIGNIFICANCE: HIGH";
+        badgeEl.className = isSurge ? "badge badge-green" : "badge badge-rose pulse-anomaly";
+      }
     }
   }
 

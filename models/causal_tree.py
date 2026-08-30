@@ -85,15 +85,12 @@ class CausalMetricTreeML:
             delta_pct = safe_float(delta_pct, 0.0)
 
             # Assign Status based on statistical severity
-            if z <= -2.0 or (z >= 2.0 and "drop" in node.lower()):
+            if z <= -2.0:
                 status = "CRITICAL_FAIL"
-                if z < max_negative_z:
-                    max_negative_z = z
-                    root_cause_node = node
+            elif z >= 2.0:
+                status = "GROWTH_SURGE"
             elif abs(z) >= 1.25:
                 status = "WARNING"
-                if not root_cause_node and z < 0:
-                    root_cause_node = node
             else:
                 status = "HEALTHY"
 
@@ -109,6 +106,23 @@ class CausalMetricTreeML:
                 "type": node_attrs.get("type", "SUB_METRIC"),
                 "variance_contribution_pct": 0.0
             }
+
+        # Determine if root metric is experiencing a positive surge or a negative drop
+        root_data = tree_results.get(root_name, {})
+        root_z = root_data.get("z_score", 0.0)
+        is_surge = root_z >= 1.5 or root_data.get("delta_pct", 0.0) > 10.0
+
+        non_root_nodes = [n for n in tree_results if n != root_name]
+        if is_surge and non_root_nodes:
+            # Pick the non-root driver with the highest positive percentage growth
+            root_cause_node = max(non_root_nodes, key=lambda n: tree_results[n].get("delta_pct", 0.0))
+        elif non_root_nodes:
+            # Pick the non-root failing node with the most negative drop
+            failing_candidates = [n for n in non_root_nodes if tree_results[n].get("z_score", 0.0) <= -1.0]
+            if failing_candidates:
+                root_cause_node = min(failing_candidates, key=lambda n: tree_results[n].get("z_score", 0.0))
+            else:
+                root_cause_node = min(non_root_nodes, key=lambda n: tree_results[n].get("delta_pct", 0.0))
 
         # Calculate mathematical variance contribution for all child sub-metrics
         if root_name in tree_results:
