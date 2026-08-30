@@ -28,7 +28,11 @@ window.TreeComponent = {
         min: 0,
         max: Math.round(range * 1.5),
         step: Math.max(1, Math.round(range / 500)),
-        formatValue: function(v) { return Number(Math.round(v)).toLocaleString() + ' sessions'; },
+        formatValue: function(v) {
+          const delta = ((v - baseline) / (baseline || 1)) * 100;
+          const sign = delta >= 0 ? '+' : '';
+          return sign + delta.toFixed(1) + '% (' + Number(Math.round(v)).toLocaleString() + ' sessions)';
+        },
         label: 'Sessions (Traffic)'
       };
     } else if (nodeKey === 'AOV') {
@@ -36,7 +40,11 @@ window.TreeComponent = {
         min: 0,
         max: Math.round(Math.max(baseline, currentValue) * 2.5),
         step: 1,
-        formatValue: function(v) { return '$' + Number(v).toFixed(2); },
+        formatValue: function(v) {
+          const delta = ((v - baseline) / (baseline || 1)) * 100;
+          const sign = delta >= 0 ? '+' : '';
+          return sign + delta.toFixed(1) + '% ($' + Number(v).toFixed(2) + ')';
+        },
         label: 'Average Order Value'
       };
     } else if (nodeKey === 'Revenue') {
@@ -44,7 +52,11 @@ window.TreeComponent = {
         min: 0,
         max: Math.round(range * 2),
         step: Math.max(100, Math.round(range / 500)),
-        formatValue: function(v) { return '$' + Number(Math.round(v)).toLocaleString(); },
+        formatValue: function(v) {
+          const delta = ((v - baseline) / (baseline || 1)) * 100;
+          const sign = delta >= 0 ? '+' : '';
+          return sign + delta.toFixed(1) + '% ($' + Number(Math.round(v)).toLocaleString() + ')';
+        },
         label: 'Revenue'
       };
     } else if (nodeKey === 'Conversion_Rate') {
@@ -52,7 +64,11 @@ window.TreeComponent = {
         min: 0,
         max: 10,
         step: 0.01,
-        formatValue: function(v) { return Number(v).toFixed(2) + '%'; },
+        formatValue: function(v) {
+          const delta = ((v - baseline) / (baseline || 1)) * 100;
+          const sign = delta >= 0 ? '+' : '';
+          return Number(v).toFixed(2) + '% (' + sign + delta.toFixed(1) + '%)';
+        },
         label: 'Conversion Rate'
       };
     } else {
