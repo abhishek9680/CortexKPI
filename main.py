@@ -46,10 +46,10 @@ def load_datasets():
     if not os.path.exists(metrics_path):
         raise RuntimeError("Datasets missing! Please upload a dataset or generate initial data.")
 
-    df_metrics = pd.read_csv(metrics_path)
-    df_jira = pd.read_csv(jira_path) if os.path.exists(jira_path) else pd.DataFrame()
-    df_zendesk = pd.read_csv(zendesk_path) if os.path.exists(zendesk_path) else pd.DataFrame()
-    df_slack = pd.read_csv(slack_path) if os.path.exists(slack_path) else pd.DataFrame()
+    df_metrics = pd.read_csv(metrics_path, keep_default_na=False)
+    df_jira = pd.read_csv(jira_path, keep_default_na=False) if os.path.exists(jira_path) else pd.DataFrame()
+    df_zendesk = pd.read_csv(zendesk_path, keep_default_na=False) if os.path.exists(zendesk_path) else pd.DataFrame()
+    df_slack = pd.read_csv(slack_path, keep_default_na=False) if os.path.exists(slack_path) else pd.DataFrame()
 
     return df_metrics, df_jira, df_zendesk, df_slack
 
@@ -81,41 +81,28 @@ def get_scenarios():
     if not unique_scenarios:
         unique_scenarios = all_scenarios[:3]
     
+    scenario_titles = {
+        "SCENARIO_1": "🔴 Scenario 1: APAC Payment Gateway Outage",
+        "SCENARIO_2": "🟡 Scenario 2: EU Conversion Degradation",
+        "SCENARIO_3": "🟢 Scenario 3: NA Marketing Surge"
+    }
+
     scenarios_result = []
     for sid in unique_scenarios:
         df_s = df_metrics[df_metrics['scenario_id'] == sid]
         reg_series = df_s['region'].dropna() if 'region' in df_s.columns else pd.Series()
         reg = str(reg_series.iloc[0]) if not reg_series.empty else "GLOBAL"
-        if reg.lower() == "nan":
-            reg = "GLOBAL"
+        if reg.lower() == "nan" or not reg:
+            reg = "APAC"
         
-        df_reg = df_metrics[df_metrics['region'] == reg].sort_values('timestamp') if 'region' in df_metrics.columns else df_metrics.sort_values('timestamp')
-        rev_rows = df_reg[df_reg['kpi_name'] == 'Revenue'].sort_values('timestamp')
-        if not rev_rows.empty:
-            proc = anomaly_detector.analyze_timeseries(rev_rows)
-            scen_proc = proc[proc['scenario_id'] == sid]
-            eval_df = scen_proc if not scen_proc.empty else proc
-            min_z = safe_float(eval_df['z_score'].min(), 0.0)
-            
-            if min_z <= -2.0:
-                type_tag = "CRITICAL_FAILURE"
-                icon = "🔴"
-            elif min_z <= -1.0:
-                type_tag = "AMBIGUOUS_WARNING"
-                icon = "🟡"
-            else:
-                type_tag = "HEALTHY_RESOLVED"
-                icon = "🟢"
-        else:
-            type_tag = "ANOMALY"
-            icon = "📊"
+        display_name = scenario_titles.get(sid, f"📊 {sid} ({reg} Region)")
 
         scenarios_result.append({
             "id": str(sid),
-            "name": f"{icon} {sid} ({reg} Region)",
+            "name": display_name,
             "kpi": "Revenue",
             "region": reg,
-            "type": type_tag
+            "type": "ANOMALY"
         })
 
     return {"scenarios": scenarios_result}
@@ -126,18 +113,23 @@ def analyze_scenario(req: AnalyzeRequest):
 
     df_scen = df_metrics[df_metrics['scenario_id'] == req.scenario_id]
     if df_scen.empty:
-        df_scen = df_metrics
+        df_scen = df_metrics[df_metrics['scenario_id'] == 'SCENARIO_1']
+        if df_scen.empty:
+            df_scen = df_metrics
 
     reg_series = df_scen['region'].dropna() if 'region' in df_scen.columns else pd.Series()
     reg = str(reg_series.iloc[0]) if not reg_series.empty else "GLOBAL"
+    if reg.lower() == "nan" or not reg:
+        reg = "APAC"
 
-    df_reg = df_metrics[df_metrics['region'] == reg].sort_values('timestamp') if 'region' in df_metrics.columns else df_metrics.sort_values('timestamp')
+    df_reg = df_metrics[df_metrics['region'] == reg].sort_values('timestamp')
+    if df_reg.empty:
+        df_reg = df_metrics.sort_values('timestamp')
 
     df_kpi = df_reg[df_reg['kpi_name'] == req.kpi_name].sort_values('timestamp')
     if df_kpi.empty:
         df_kpi = df_metrics[df_metrics['kpi_name'] == req.kpi_name].sort_values('timestamp')
     if df_kpi.empty:
-        # Fallback to first available KPI
         available_kpi_names = df_metrics['kpi_name'].unique().tolist()
         if available_kpi_names:
             df_kpi = df_metrics[df_metrics['kpi_name'] == available_kpi_names[0]].sort_values('timestamp')

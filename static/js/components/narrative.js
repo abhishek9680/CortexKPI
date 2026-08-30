@@ -1,17 +1,17 @@
 window.NarrativeComponent = {
   /**
-   * Renders Layer 4 with persona-aware content and dynamic Mitigation / Reset toggle button.
-   * @param {string} persona - 'csuite', 'devops', or 'bi'
-   * @param {object} causalTree - Layer 2 causal tree data for BI stats
+   * Renders Step 4 with persona-aware content, simple/technical toggle support,
+   * and dynamic 1-Click Mitigation / Reset button.
    */
-  render: function(containerId, narrativeData, scenarioId, onMitigateTrigger, persona, causalTree) {
+  render: function(containerId, narrativeData, scenarioId, onMitigateTrigger, persona, causalTree, mode) {
     var container = document.getElementById(containerId);
     if (!container) return;
 
     persona = persona || "csuite";
+    mode = mode || "simple";
     var hd = narrativeData.honest_detective || {};
     var confPct = hd.confidence_pct || 55;
-    var isHighConf = confPct >= 80;
+    var isHighConf = confPct >= 75;
 
     var html = "";
 
@@ -25,63 +25,59 @@ window.NarrativeComponent = {
     // ============================
     if (persona === "csuite") {
       html += '<div class="persona-context-bar ctx-csuite">' +
-        '\uD83D\uDC51 C-Suite Executive View — Financial impact and strategic recommendations' +
+        '👑 Executive View — Financial impact and strategic recommendations' +
         '</div>';
     } else if (persona === "devops") {
       html += '<div class="persona-context-bar ctx-devops">' +
-        '\u2699\uFE0F DevOps Engineering View — Root cause analysis, deployment logs, and system triage' +
+        '⚙️ DevOps View — Root cause analysis, deployment logs, and system triage' +
         '</div>';
     } else if (persona === "bi") {
       html += '<div class="persona-context-bar ctx-bi">' +
-        '\uD83D\uDCCA BI Analyst View — Statistical significance, model metrics, and data quality audit' +
+        '📊 BI Analyst View — Statistical significance, model metrics, and hypothesis audit' +
         '</div>';
     }
 
     // ============================
-    // DEVOPS: Terminal-style incident log
+    // TECHNICAL MODE DIAGNOSTICS (Only shown in technical mode)
     // ============================
-    if (persona === "devops") {
-      var tree = (causalTree && causalTree.tree) ? causalTree.tree : {};
-      var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "Resolved / Baseline";
-      var rootData = tree[rootCause] || {};
-      var rootZ = (rootData.z_score || 0).toFixed(1);
-      var rootVal = rootData.value || 0;
-      var rootBase = rootData.baseline || 0;
+    if (mode === "technical") {
+      if (persona === "devops") {
+        var tree = (causalTree && causalTree.tree) ? causalTree.tree : {};
+        var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "Resolved";
+        var rootData = tree[rootCause] || {};
+        var rootZ = (rootData.z_score || 0).toFixed(1);
+        var rootVal = rootData.value || 0;
+        var rootBase = rootData.baseline || 0;
 
-      html += '<div class="devops-log-block">' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="' + (isResolved ? 'log-level-info' : 'log-level-crit') + '">[' + (isResolved ? 'HEALTHY' : 'CRITICAL') + ']</span> System State: ' + (isResolved ? 'Baseline Healthy' : 'Anomaly Triggered for ' + rootCause.replace(/_/g, " ")) + '</span>' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-warn">[TRIAGE]</span> Z-score=' + rootZ + ' | Current=' + Number(rootVal).toLocaleString() + ' | Baseline=' + Number(rootBase).toLocaleString() + '</span>' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Causal path: Revenue \u2192 ' + (causalTree.failing_path || []).join(" \u2192 ") + '</span>' +
-        '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Confidence score: ' + confPct + '% | Engine: Bayesian + IsolationForest + RAG</span>' +
-        '</div>';
-    }
+        html += '<div class="devops-log-block" style="margin-bottom:12px;">' +
+          '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="' + (isResolved ? 'log-level-info' : 'log-level-crit') + '">[' + (isResolved ? 'HEALTHY' : 'CRITICAL') + ']</span> System State: ' + (isResolved ? 'Baseline Healthy' : 'Anomaly Triggered for ' + rootCause.replace(/_/g, " ")) + '</span>' +
+          '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-warn">[TRIAGE]</span> Z-score=' + rootZ + ' | Current=' + Number(rootVal).toLocaleString() + ' | Baseline=' + Number(rootBase).toLocaleString() + '</span>' +
+          '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Causal path: Revenue → ' + (causalTree.failing_path || []).join(" → ") + '</span>' +
+          '</div>';
+      } else if (persona === "bi") {
+        var tree = (causalTree && causalTree.tree) ? causalTree.tree : {};
+        var revNode = tree["Revenue"] || {};
+        var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "None";
+        var critCount = 0;
+        var warnCount = 0;
+        var healthyCount = 0;
+        var keys = Object.keys(tree);
+        for (var i = 0; i < keys.length; i++) {
+          var status = tree[keys[i]].status;
+          if (status === "CRITICAL_FAIL") critCount++;
+          else if (status === "WARNING") warnCount++;
+          else healthyCount++;
+        }
 
-    // ============================
-    // BI ANALYST: Statistical summary cards
-    // ============================
-    if (persona === "bi") {
-      var tree = (causalTree && causalTree.tree) ? causalTree.tree : {};
-      var revNode = tree["Revenue"] || {};
-      var rootCause = (causalTree && causalTree.root_cause_leaf) ? causalTree.root_cause_leaf : "None (Healthy)";
-      var critCount = 0;
-      var warnCount = 0;
-      var healthyCount = 0;
-      var keys = Object.keys(tree);
-      for (var i = 0; i < keys.length; i++) {
-        var status = tree[keys[i]].status;
-        if (status === "CRITICAL_FAIL") critCount++;
-        else if (status === "WARNING") warnCount++;
-        else healthyCount++;
+        html += '<div class="bi-stats-grid" style="margin-bottom:12px;">' +
+          '<div class="bi-stat-card"><div class="stat-label">Revenue Z-Score</div><div class="stat-value">' + (revNode.z_score || 0).toFixed(2) + '</div></div>' +
+          '<div class="bi-stat-card"><div class="stat-label">Root Cause Node</div><div class="stat-value" style="font-size:0.85rem;">' + rootCause.replace(/_/g, " ") + '</div></div>' +
+          '<div class="bi-stat-card"><div class="stat-label">Model Confidence</div><div class="stat-value">' + confPct + '%</div></div>' +
+          '<div class="bi-stat-card"><div class="stat-label">Critical Nodes</div><div class="stat-value" style="color:var(--anomaly-rose);">' + critCount + '</div></div>' +
+          '<div class="bi-stat-card"><div class="stat-label">Warning Nodes</div><div class="stat-value" style="color:var(--warning-amber);">' + warnCount + '</div></div>' +
+          '<div class="bi-stat-card"><div class="stat-label">Healthy Nodes</div><div class="stat-value" style="color:var(--health-green);">' + healthyCount + '</div></div>' +
+          '</div>';
       }
-
-      html += '<div class="bi-stats-grid">' +
-        '<div class="bi-stat-card"><div class="stat-label">Revenue Z-Score</div><div class="stat-value">' + (revNode.z_score || 0).toFixed(2) + '</div></div>' +
-        '<div class="bi-stat-card"><div class="stat-label">Root Cause Node</div><div class="stat-value" style="font-size:0.85rem;">' + rootCause.replace(/_/g, " ") + '</div></div>' +
-        '<div class="bi-stat-card"><div class="stat-label">Model Confidence</div><div class="stat-value">' + confPct + '%</div></div>' +
-        '<div class="bi-stat-card"><div class="stat-label">Critical Nodes</div><div class="stat-value" style="color:var(--anomaly-rose);">' + critCount + '</div></div>' +
-        '<div class="bi-stat-card"><div class="stat-label">Warning Nodes</div><div class="stat-value" style="color:var(--warning-amber);">' + warnCount + '</div></div>' +
-        '<div class="bi-stat-card"><div class="stat-label">Healthy Nodes</div><div class="stat-value" style="color:var(--health-green);">' + healthyCount + '</div></div>' +
-        '</div>';
     }
 
     // ============================
@@ -89,44 +85,29 @@ window.NarrativeComponent = {
     // ============================
     html += '<div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">' +
       '<span class="badge ' + (isHighConf ? "badge-blue" : "badge-amber") + '">' +
-        (isHighConf ? "\uD83D\uDFE2 HIGH CONFIDENCE DIAGNOSIS" : "\u26A0\uFE0F AMBIGUOUS EVIDENCE DETECTED") + " (" + confPct + "% Score)" +
+        (isHighConf ? "🟢 HIGH CONFIDENCE DIAGNOSIS" : "⚠️ AMBIGUOUS / MONITORING") + " (" + confPct + "% Confidence)" +
       '</span>' +
       '<button id="voice-ai-btn" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 10px;">' +
-        "\uD83D\uDD0A Listen to " + (persona === "devops" ? "Incident Brief" : persona === "bi" ? "Analysis Summary" : "Executive Briefing") +
+        "🔊 Read Aloud" +
       '</button>' +
     '</div>';
 
     // ============================
-    // HEADLINE
+    // HEADLINE & EXECUTIVE SUMMARY
     // ============================
-    var headlinePrefix = "";
-    if (persona === "devops") headlinePrefix = "\uD83D\uDEE0\uFE0F ";
-    else if (persona === "bi") headlinePrefix = "\uD83D\uDD2C ";
+    html += '<h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; color: #f8fafc;">' + narrativeData.headline + '</h3>';
 
-    html += '<h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">' + headlinePrefix + narrativeData.headline + '</h3>';
-
-    // ============================
-    // EXECUTIVE SUMMARY
-    // ============================
-    html += '<p id="executive-narrative-text" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">' +
+    html += '<p id="executive-narrative-text" style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 14px;">' +
       narrativeData.executive_summary +
     '</p>';
 
     // ============================
     // 4-PILLAR HONEST DETECTIVE CONSOLE
     // ============================
-    var protocolLabel = "\uD83D\uDD75\uFE0F Honest Detective Safeguards Protocol";
-    if (persona === "devops") protocolLabel = "\uD83D\uDD27 Incident Triage Console";
-    else if (persona === "bi") protocolLabel = "\uD83D\uDCCB Data Quality & Hypothesis Audit";
-
-    html += '<div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">' +
-      protocolLabel +
-    '</div>';
-
-    var knownLabel = persona === "devops" ? "\u2705 Confirmed Indicators" : persona === "bi" ? "\u2705 Statistically Significant" : "\u2705 Corroborated Facts";
-    var gapLabel = persona === "devops" ? "\u26A0\uFE0F Missing Telemetry" : persona === "bi" ? "\u26A0\uFE0F Data Quality Gaps" : "\u26A0\uFE0F Telemetry Gaps";
-    var ruledLabel = persona === "devops" ? "\u274C Services Cleared" : persona === "bi" ? "\u274C Hypotheses Rejected" : "\u274C Ruled Out";
-    var sopLabel = persona === "devops" ? "\uD83D\uDE80 Remediation Actions" : persona === "bi" ? "\uD83E\uDDEA Recommended Experiments" : "\uD83E\uDDEA Prescribed SOP Actions";
+    var knownLabel = persona === "devops" ? "✅ Confirmed Indicators" : persona === "bi" ? "✅ Statistically Significant" : "✅ Corroborated Facts";
+    var gapLabel = persona === "devops" ? "⚠️ Missing Telemetry" : persona === "bi" ? "⚠️ Data Quality Gaps" : "⚠️ Telemetry Gaps";
+    var ruledLabel = persona === "devops" ? "❌ Services Cleared" : persona === "bi" ? "❌ Hypotheses Rejected" : "❌ Ruled Out";
+    var sopLabel = persona === "devops" ? "🚀 Remediation Actions" : persona === "bi" ? "🧪 Recommended Experiments" : "🧪 Prescribed SOP Actions";
 
     html += '<div class="honest-grid">' +
       '<div class="pillar-box pillar-knowns">' +
@@ -148,28 +129,26 @@ window.NarrativeComponent = {
     '</div>';
 
     // ============================
-    // DYNAMIC MITIGATION / RESET BUTTON
+    // 1-CLICK MITIGATION / RESET ACTION BUTTON
     // ============================
     var actionType = isResolved ? "REINJECT_ANOMALY" : "ROLLBACK_DEPLOYMENT";
     var buttonHtml = "";
 
     if (isResolved) {
-      // Scenario is Healthy/Resolved -> Render Reset Anomaly Button
       buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-outline" data-action="REINJECT_ANOMALY" style="border-color: var(--warning-amber); color: var(--warning-amber); font-weight: 700; background: rgba(245, 158, 11, 0.1);">' +
-        '\u21BA Reset Outage State (Re-Inject Anomaly)' +
+        '↺ Reset Outage State (Re-Inject Anomaly)' +
       '</button>';
     } else {
-      // Scenario is Anomalous -> Render Trigger Automated Rollback Button
-      var mitigateLabel = "\uD83C\uDFAE Trigger Automated SOP Rollback";
-      if (persona === "devops") mitigateLabel = "\uD83D\uDE80 Execute Hotfix Rollback & Restart Service";
-      else if (persona === "bi") mitigateLabel = "\uD83D\uDCCA Run Controlled A/B Recovery Experiment";
+      var mitigateLabel = "🎮 1-Click Automated SOP Rollback";
+      if (persona === "devops") mitigateLabel = "🚀 Execute Hotfix Rollback & Restart Service";
+      else if (persona === "bi") mitigateLabel = "📊 Run Controlled A/B Recovery Experiment";
 
-      buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-primary" data-action="ROLLBACK_DEPLOYMENT">' +
+      buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-primary" data-action="ROLLBACK_DEPLOYMENT" style="font-weight: 700; font-size: 0.9rem; padding: 10px 18px;">' +
         mitigateLabel +
       '</button>';
     }
 
-    html += '<div style="margin-top: 14px; text-align: right;">' + buttonHtml + '</div>';
+    html += '<div style="margin-top: 16px; display: flex; justify-content: flex-end;">' + buttonHtml + '</div>';
 
     container.innerHTML = html;
 
@@ -181,30 +160,42 @@ window.NarrativeComponent = {
     var voiceBtn = document.getElementById("voice-ai-btn");
     if (voiceBtn) {
       voiceBtn.addEventListener("click", function() {
-        if ("speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-          var utterance = new SpeechSynthesisUtterance(narrativeData.headline + ". " + narrativeData.executive_summary);
-          utterance.rate = 1.0;
-          utterance.pitch = 1.0;
-          window.speechSynthesis.speak(utterance);
-          voiceBtn.innerText = "\uD83D\uDD0A Playing...";
-          utterance.onend = function() {
-            voiceBtn.innerText = "\uD83D\uDD0A Listen to " + (persona === "devops" ? "Incident Brief" : persona === "bi" ? "Analysis Summary" : "Executive Briefing");
-          };
-        } else {
+        if (!window.speechSynthesis) {
           alert("Web Speech API is not supported in this browser.");
+          return;
         }
+
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          voiceBtn.innerText = "🔊 Read Aloud";
+          return;
+        }
+
+        var textToSpeak = (narrativeData.headline || "") + ". " + (narrativeData.executive_summary || "");
+        var utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = function() {
+          voiceBtn.innerText = "⏹ Stop Speech";
+        };
+        utterance.onend = function() {
+          voiceBtn.innerText = "🔊 Read Aloud";
+        };
+        utterance.onerror = function() {
+          voiceBtn.innerText = "🔊 Read Aloud";
+        };
+
+        window.speechSynthesis.speak(utterance);
       });
     }
 
-    // Mitigation / Reset Action Trigger Listener
+    // Dynamic Mitigation / Reset Action Button
     var mitBtn = document.getElementById("execute-mitigation-btn");
     if (mitBtn && onMitigateTrigger) {
       mitBtn.addEventListener("click", function() {
-        var act = mitBtn.getAttribute("data-action") || actionType;
-        mitBtn.disabled = true;
-        mitBtn.innerText = act === "REINJECT_ANOMALY" ? "\u21BA Resetting Anomaly..." : "\u26A1 Executing Rollback...";
-        onMitigateTrigger(scenarioId, act);
+        var action = mitBtn.getAttribute("data-action");
+        onMitigateTrigger(scenarioId, action);
       });
     }
   }

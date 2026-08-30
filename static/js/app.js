@@ -1,9 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("Initializing CortexKPI Production Executive Dashboard...");
+  console.log("Initializing CortexKPI Simplified Executive Dashboard...");
 
   let currentScenarioId = "SCENARIO_1";
   let currentAnalysisData = null;
   let currentPersona = "csuite";
+  let currentMode = "simple"; // 'simple' or 'technical'
 
   const scenarioSelect = document.getElementById("scenario-select");
   const personaButtons = document.querySelectorAll(".persona-btn");
@@ -17,6 +18,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const selectedFilename = document.getElementById("selected-filename");
   const playSimBtn = document.getElementById("play-sim-btn");
   const llmNarrativeBtn = document.getElementById("llm-narrative-btn");
+  const modeSimpleBtn = document.getElementById("mode-simple-btn");
+  const modeTechBtn = document.getElementById("mode-tech-btn");
+
+  // Mode Switcher Listeners
+  if (modeSimpleBtn && modeTechBtn) {
+    modeSimpleBtn.addEventListener("click", () => {
+      modeSimpleBtn.classList.add("active");
+      modeTechBtn.classList.remove("active");
+      document.body.classList.add("mode-simple");
+      document.body.classList.remove("mode-technical");
+      currentMode = "simple";
+      if (currentAnalysisData) renderAllPanels(currentAnalysisData, currentScenarioId, currentPersona);
+    });
+
+    modeTechBtn.addEventListener("click", () => {
+      modeTechBtn.classList.add("active");
+      modeSimpleBtn.classList.remove("active");
+      document.body.classList.add("mode-technical");
+      document.body.classList.remove("mode-simple");
+      currentMode = "technical";
+      if (currentAnalysisData) renderAllPanels(currentAnalysisData, currentScenarioId, currentPersona);
+    });
+  }
 
   // 1. Fetch Scenarios dynamically
   function loadScenariosList() {
@@ -180,12 +204,11 @@ document.addEventListener("DOMContentLoaded", () => {
         llmNarrativeBtn.innerText = "🤖 AI Briefing (Qwen / LLM)";
         llmNarrativeBtn.disabled = false;
         
-        // Show AI reasoning in an alert or modal
         const narrativeEl = document.getElementById("narrative-container");
         if (narrativeEl) {
           const aiBox = document.createElement("div");
           aiBox.className = "glass-panel";
-          aiBox.style.cssText = "border: 1px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); padding: 14px; border-radius: 10px; margin-top: 14px;";
+          aiBox.style.cssText = "border: 1px solid #8b5cf6; background: rgba(139, 92, 246, 0.12); padding: 14px; border-radius: 10px; margin-top: 14px;";
           aiBox.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <span style="font-weight:700; color:#c084fc; font-size:0.85rem;">🤖 LIVE AI EXECUTIVE REASONING (${res.source})</span>
@@ -224,17 +247,17 @@ document.addEventListener("DOMContentLoaded", () => {
    * Renders all 4 dashboard panels with persona-aware content.
    */
   function renderAllPanels(data, scenarioId, persona) {
-    // Render Layer 1: Time Series Chart
+    // Render Step 1: Time Series Chart
     if (window.ChartComponent) {
       window.ChartComponent.render("timeseries-canvas", data.layer_1_timeseries);
     }
 
-    // Render Layer 2: Causal Metric Tree & What-If Listener
+    // Render Step 2: Causal Metric Tree & What-If Listener
     if (window.TreeComponent) {
       window.TreeComponent.render("causal-tree-container", data.layer_2_causal_tree, (nodeAdjusted, newValue) => {
         handleWhatIfSimulation(scenarioId, nodeAdjusted, newValue);
       }, (selectedNode) => {
-        // Node click filter: Filter Layer 3 evidence by selected node!
+        // Filter Step 3 evidence by selected node
         if (window.EvidenceComponent && data.layer_3_evidence) {
           const filtered = data.layer_3_evidence.filter(e => 
             e.title.toLowerCase().includes(selectedNode.toLowerCase()) || 
@@ -245,16 +268,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Render Layer 3: Evidence Cards
+    // Render Step 3: Evidence Cards
     if (window.EvidenceComponent) {
       window.EvidenceComponent.render("evidence-container", data.layer_3_evidence, persona);
     }
 
-    // Render Layer 4: Narrative & Honest Detective with Mitigation / Reset Action
+    // Render Step 4: Narrative & Honest Detective
     if (window.NarrativeComponent) {
       window.NarrativeComponent.render("narrative-container", data.layer_4_narrative, scenarioId, (scenId, actionType) => {
         handleMitigationExecution(scenId, actionType);
-      }, persona, data.layer_2_causal_tree);
+      }, persona, data.layer_2_causal_tree, currentMode);
     }
   }
 
@@ -265,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const titleEl = document.getElementById("banner-headline");
     const summaryEl = document.getElementById("banner-summary");
     const impactEl = document.getElementById("banner-impact");
-    const badgeEl = document.getElementById("banner-badge") || document.querySelector(".executive-banner .badge-rose");
+    const badgeEl = document.getElementById("banner-badge");
 
     if (!narrative) return;
     var hd = narrative.honest_detective || {};
@@ -305,18 +328,15 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .then(res => res.json())
     .then(simResult => {
-      // 1. Update Executive Banner Financial Number
       const impactEl = document.getElementById("banner-impact");
       if (impactEl) {
         impactEl.innerText = "$" + Number(simResult.projected_revenue).toLocaleString(undefined, {maximumFractionDigits: 2});
       }
 
-      // 2. Dynamically Update Tree SVG Node Values & Edges live on screen!
       if (window.TreeComponent && simResult.updated_causal_tree) {
         window.TreeComponent.updateNodeValues(simResult.updated_causal_tree);
       }
 
-      // 3. Dynamically Update Layer 1 Time Series Line Graph live on screen!
       if (window.ChartComponent) {
         window.ChartComponent.updateSimulatedPoint(simResult.projected_revenue);
       }
@@ -340,7 +360,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       alert(`${icon} ${title}!\n\nTicket: ${res.mitigation_event.ticket_created}\nAction: ${res.mitigation_event.action_taken}\nStatus: ${res.mitigation_event.projected_recovery}`);
       
-      // Re-run Analysis Pipeline to visually update dashboard metrics!
       runAnalysis(scenarioId);
       loadScenariosList();
     })
