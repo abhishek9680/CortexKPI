@@ -42,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  let scenariosMap = {};
+
   // 1. Fetch Scenarios dynamically
   function loadScenariosList() {
     fetch("/api/scenarios")
@@ -49,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .then(data => {
         scenarioSelect.innerHTML = "";
         data.scenarios.forEach(scen => {
+          scenariosMap[scen.id] = scen;
           const opt = document.createElement("option");
           opt.value = scen.id;
           opt.innerText = scen.name;
@@ -141,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         body: formData
       })
-      .then(res => res.json())
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
       .then(res => {
         alert("✅ " + res.message);
         uploadModal.classList.remove("active");
@@ -199,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scenario_id: currentScenarioId })
       })
-      .then(res => res.json())
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
       .then(res => {
         llmNarrativeBtn.innerText = "🤖 AI Briefing (Qwen / LLM)";
         llmNarrativeBtn.disabled = false;
@@ -229,12 +232,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 2. Main Analysis Pipeline API Runner
   function runAnalysis(scenarioId) {
+    const kpiName = scenariosMap[scenarioId] ? scenariosMap[scenarioId].kpi : "Revenue";
     fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenario_id: scenarioId, kpi_name: "Revenue" })
+      body: JSON.stringify({ scenario_id: scenarioId, kpi_name: kpiName })
     })
-    .then(res => res.json())
+    .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
     .then(data => {
       currentAnalysisData = data;
       updateExecutiveBanner(data.layer_4_narrative, currentPersona);
@@ -243,10 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch(err => console.error("API Analysis Error:", err));
   }
 
+  let lastSelectedNode = null;
+
   /**
    * Renders all 4 dashboard panels with persona-aware content.
    */
   function renderAllPanels(data, scenarioId, persona) {
+    lastSelectedNode = null; // reset filter state on render
+
     // Render Step 1: Time Series Chart
     if (window.ChartComponent) {
       window.ChartComponent.render("timeseries-canvas", data.layer_1_timeseries);
@@ -257,13 +265,20 @@ document.addEventListener("DOMContentLoaded", () => {
       window.TreeComponent.render("causal-tree-container", data.layer_2_causal_tree, (nodeAdjusted, newValue) => {
         handleWhatIfSimulation(scenarioId, nodeAdjusted, newValue);
       }, (selectedNode) => {
-        // Filter Step 3 evidence by selected node
+        // Toggle filter or filter Step 3 evidence by selected node
         if (window.EvidenceComponent && data.layer_3_evidence) {
-          const filtered = data.layer_3_evidence.filter(e => 
-            e.title.toLowerCase().includes(selectedNode.toLowerCase()) || 
-            e.details.toLowerCase().includes(selectedNode.toLowerCase())
-          );
-          window.EvidenceComponent.render("evidence-container", filtered.length > 0 ? filtered : data.layer_3_evidence, persona);
+          if (lastSelectedNode === selectedNode) {
+            lastSelectedNode = null;
+            window.EvidenceComponent.render("evidence-container", data.layer_3_evidence, persona);
+          } else {
+            lastSelectedNode = selectedNode;
+            const searchStr = selectedNode.replace(/_/g, ' ').toLowerCase();
+            const filtered = data.layer_3_evidence.filter(e => 
+              e.title.toLowerCase().includes(searchStr) || 
+              e.details.toLowerCase().includes(searchStr)
+            );
+            window.EvidenceComponent.render("evidence-container", filtered.length > 0 ? filtered : data.layer_3_evidence, persona);
+          }
         }
       });
     }
@@ -341,7 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scenario_id: scenarioId, node_adjusted: nodeAdjusted, new_value: newValue })
     })
-    .then(res => res.json())
+    .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
     .then(simResult => {
       const impactEl = document.getElementById("banner-impact");
       if (impactEl) {
@@ -367,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scenario_id: scenarioId, action_type: actionType })
     })
-    .then(res => res.json())
+    .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
     .then(res => {
       const isRollback = actionType === "ROLLBACK_DEPLOYMENT";
       const icon = isRollback ? "✅" : "↺";

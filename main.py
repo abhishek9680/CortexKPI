@@ -1,6 +1,7 @@
 import os
 import math
 import random
+import shutil
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -81,6 +82,7 @@ def get_scenarios():
     if not unique_scenarios:
         unique_scenarios = all_scenarios[:3]
     
+    # Hardcoded display names for known demo scenarios; custom uploads get auto-generated names
     scenario_titles = {
         "SCENARIO_1": "🔴 Scenario 1: APAC Payment Gateway Outage",
         "SCENARIO_2": "🟡 Scenario 2: EU Conversion Degradation",
@@ -91,18 +93,36 @@ def get_scenarios():
     for sid in unique_scenarios:
         df_s = df_metrics[df_metrics['scenario_id'] == sid]
         reg_series = df_s['region'].dropna() if 'region' in df_s.columns else pd.Series()
-        reg = str(reg_series.iloc[0]) if not reg_series.empty else "GLOBAL"
+        reg = str(reg_series.iloc[0]) if not reg_series.empty and len(reg_series) > 0 else "GLOBAL"
         if reg.lower() == "nan" or not reg:
-            reg = "APAC"
+            reg = "GLOBAL"
         
-        display_name = scenario_titles.get(sid, f"📊 {sid} ({reg} Region)")
+        # Auto-detect scenario type from data: check if primary KPI is surging or dropping
+        primary_kpi = 'Revenue' if 'Revenue' in df_s['kpi_name'].values else df_s['kpi_name'].iloc[0] if not df_s.empty else 'Revenue'
+        kpi_vals = df_s[df_s['kpi_name'] == primary_kpi]['value'].astype(float)
+        if len(kpi_vals) >= 10:
+            recent_mean = kpi_vals.tail(5).mean()
+            baseline_mean = kpi_vals.head(len(kpi_vals) - 5).mean()
+            delta_pct = ((recent_mean - baseline_mean) / (abs(baseline_mean) + 1e-5)) * 100
+            scenario_type = "GROWTH_SURGE" if delta_pct > 10 else ("ANOMALY_DROP" if delta_pct < -10 else "STABLE")
+        else:
+            scenario_type = "ANOMALY_DROP"
+            delta_pct = 0
+        
+        # Generate dynamic display name for unknown scenarios
+        if sid in scenario_titles:
+            display_name = scenario_titles[sid]
+        else:
+            type_emoji = "🟢" if scenario_type == "GROWTH_SURGE" else "🔴" if scenario_type == "ANOMALY_DROP" else "🟡"
+            type_label = "Growth Surge" if scenario_type == "GROWTH_SURGE" else "Anomaly" if scenario_type == "ANOMALY_DROP" else "Monitoring"
+            display_name = f"{type_emoji} {sid}: {reg} {type_label} ({delta_pct:+.0f}%)"
 
         scenarios_result.append({
             "id": str(sid),
             "name": display_name,
-            "kpi": "Revenue",
+            "kpi": primary_kpi,
             "region": reg,
-            "type": "ANOMALY"
+            "type": scenario_type
         })
 
     return {"scenarios": scenarios_result}
@@ -235,13 +255,15 @@ def simulate_whatif(req: WhatIfRequest):
     updated_causal_tree = causal_tree_decomposer.simulate_whatif(metric_snapshot, req.node_adjusted, req.new_value)
     
     root_node_name = "Revenue" if "Revenue" in updated_causal_tree["tree"] else list(updated_causal_tree["tree"].keys())[0]
-    rev_val = safe_float(updated_causal_tree["tree"][root_node_name]["value"], 420000.0)
-    rev_base = safe_float(updated_causal_tree["tree"][root_node_name]["baseline"], 420000.0)
+    root_tree_data = updated_causal_tree["tree"][root_node_name]
+    fallback_val = safe_float(root_tree_data.get("baseline"), 0.0)
+    rev_val = safe_float(root_tree_data.get("value"), fallback_val)
+    rev_base = safe_float(root_tree_data.get("baseline"), fallback_val)
     diff = rev_val - rev_base
 
     return {
         "node_adjusted": req.node_adjusted,
-        "new_value": safe_float(req.new_value, 90.0),
+        "new_value": safe_float(req.new_value, safe_float(metric_snapshot.get(req.node_adjusted, {}).get("baseline"), 0.0)),
         "updated_causal_tree": updated_causal_tree,
         "projected_revenue": rev_val,
         "projected_diff": round(diff, 2),
@@ -335,24 +357,21 @@ async def upload_dataset(
     Enterprise Data Ingestion: Ingests any custom CSV datasets and refreshes ML pipelines.
     """
     try:
-        metrics_content = await metrics_file.read()
+        # Stream files to disk (memory-safe for large enterprise datasets)
         with open(os.path.join(DATA_DIR, "metrics_timeseries.csv"), "wb") as f:
-            f.write(metrics_content)
+            shutil.copyfileobj(metrics_file.file, f)
 
         if jira_file:
-            jira_content = await jira_file.read()
             with open(os.path.join(DATA_DIR, "jira_deployments.csv"), "wb") as f:
-                f.write(jira_content)
+                shutil.copyfileobj(jira_file.file, f)
 
         if zendesk_file:
-            zendesk_content = await zendesk_file.read()
             with open(os.path.join(DATA_DIR, "zendesk_tickets.csv"), "wb") as f:
-                f.write(zendesk_content)
+                shutil.copyfileobj(zendesk_file.file, f)
 
         if slack_file:
-            slack_content = await slack_file.read()
             with open(os.path.join(DATA_DIR, "slack_alerts.csv"), "wb") as f:
-                f.write(slack_content)
+                shutil.copyfileobj(slack_file.file, f)
 
         return {"status": "SUCCESS", "message": "Enterprise datasets ingested successfully into CortexKPI!"}
     except Exception as e:

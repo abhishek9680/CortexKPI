@@ -162,29 +162,37 @@ class CausalMetricTreeML:
         adj_val = safe_float(new_value, snapshot[node_adjusted].get("baseline", 100.0))
         snapshot[node_adjusted]["value"] = adj_val
 
-        # Propagate upstream/downstream mathematical relationships
-        # Case 1: Payment_Success_Rate -> Conversion_Rate
+        # Propagate upstream/downstream mathematical relationships using data-driven baselines
+        # Case 1: Payment_Success_Rate -> Conversion_Rate (parent-child proportional propagation)
         if node_adjusted == "Payment_Success_Rate" and "Conversion_Rate" in snapshot:
-            base_auth = safe_float(snapshot["Payment_Success_Rate"].get("baseline"), 98.0)
-            base_conv = safe_float(snapshot["Conversion_Rate"].get("baseline"), 2.85)
+            base_auth = safe_float(snapshot["Payment_Success_Rate"].get("baseline"), snapshot["Payment_Success_Rate"].get("value", 1.0))
+            base_conv = safe_float(snapshot["Conversion_Rate"].get("baseline"), snapshot["Conversion_Rate"].get("value", 1.0))
             if base_auth > 0:
                 scale_factor = adj_val / base_auth
                 snapshot["Conversion_Rate"]["value"] = round(base_conv * scale_factor, 3)
 
         # Case 2: Conversion_Rate -> Payment_Success_Rate
         elif node_adjusted == "Conversion_Rate" and "Payment_Success_Rate" in snapshot:
-            base_conv = safe_float(snapshot["Conversion_Rate"].get("baseline"), 2.85)
-            base_auth = safe_float(snapshot["Payment_Success_Rate"].get("baseline"), 98.0)
+            base_conv = safe_float(snapshot["Conversion_Rate"].get("baseline"), snapshot["Conversion_Rate"].get("value", 1.0))
+            base_auth = safe_float(snapshot["Payment_Success_Rate"].get("baseline"), snapshot["Payment_Success_Rate"].get("value", 1.0))
             if base_conv > 0:
                 scale_factor = adj_val / base_conv
                 snapshot["Payment_Success_Rate"]["value"] = round(min(100.0, base_auth * scale_factor), 2)
 
-        # Case 3: Recompute Root (Revenue) if multiplicative e-commerce metrics exist
+        # Generalized DAG propagation: if parent-child edges exist, propagate proportionally
+        for parent, child in self.graph.edges():
+            if child == node_adjusted and parent in snapshot and parent != "Revenue":
+                child_base = safe_float(snapshot[child].get("baseline"), snapshot[child].get("value", 1.0))
+                if child_base > 0:
+                    parent_base = safe_float(snapshot[parent].get("baseline"), snapshot[parent].get("value", 1.0))
+                    snapshot[parent]["value"] = round(parent_base * (adj_val / child_base), 2)
+
+        # Recompute Root (Revenue) using multiplicative composition if all e-commerce metrics exist
         if "Revenue" in snapshot and "Sessions" in snapshot and "Conversion_Rate" in snapshot and "AOV" in snapshot:
-            sess = safe_float(snapshot["Sessions"].get("value"), 120000)
-            cvr_val = safe_float(snapshot["Conversion_Rate"].get("value"), 2.85)
+            sess = safe_float(snapshot["Sessions"].get("value"), snapshot["Sessions"].get("baseline", 1.0))
+            cvr_val = safe_float(snapshot["Conversion_Rate"].get("value"), snapshot["Conversion_Rate"].get("baseline", 1.0))
             cvr = cvr_val / 100.0 if cvr_val > 1.0 else cvr_val
-            aov = safe_float(snapshot["AOV"].get("value"), 185.0)
+            aov = safe_float(snapshot["AOV"].get("value"), snapshot["AOV"].get("baseline", 1.0))
             snapshot["Revenue"]["value"] = round(sess * cvr * aov, 2)
         elif "Revenue" in snapshot:
             # Generalized proportional sum/product propagation

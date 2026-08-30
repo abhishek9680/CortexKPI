@@ -46,11 +46,14 @@ class AnomalyDetectorML:
         # 2. Dynamic Bayesian Rolling Statistics (Shifted by 1 to prevent contamination from active anomalies)
         shifted_val = df['value'].shift(1)
         df['rolling_mean'] = shifted_val.rolling(window=adaptive_window, min_periods=3).mean()
+        # Apply seasonality adjustment to baseline for day-of-week patterns
+        df['rolling_mean'] = df['rolling_mean'] * seasonality_factor
         df['rolling_std'] = shifted_val.rolling(window=adaptive_window, min_periods=3).std()
         
         # Adaptive fallbacks for early sequence values
         df['rolling_mean'] = df['rolling_mean'].fillna(df['value'].expanding().mean()).fillna(df['value'].iloc[0] if len(df) > 0 else 0.0)
-        df['rolling_std'] = df['rolling_std'].fillna(df['value'].expanding().std()).fillna(df['value'].std() if df['value'].std() > 0 else 1.0)
+        global_std = df['value'].std() if len(df) > 1 and df['value'].std() > 0 else max(1.0, df['value'].mean() * 0.02)
+        df['rolling_std'] = df['rolling_std'].fillna(df['value'].expanding().std()).fillna(global_std)
         df['rolling_std'] = df['rolling_std'].replace(0.0, max(1.0, df['value'].mean() * 0.02))
 
         # 3. Dynamic Confidence Bounds (95% CI)
