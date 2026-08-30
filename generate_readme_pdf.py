@@ -82,10 +82,10 @@ def build_pdf():
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#3B82F6"), spaceAfter=10))
 
     # Executive Overview
-    story.append(Paragraph("1. Executive Overview & Problem Statement", h2_style))
+    story.append(Paragraph("1. Executive Overview &amp; Problem Statement", h2_style))
     story.append(Paragraph(
-        "When high-stakes enterprise metrics drop (e.g. an unexpected <b>$190,000/day revenue loss</b> in APAC), executive leadership and engineering teams spend 6+ hours sifting through fragmented Datadog APM charts, Jira pull requests, Zendesk support tickets, and Slack alerts trying to answer: <i>What happened, why it happened, and how to fix it?</i><br/><br/>"
-        "<b>CortexKPI</b> is an autonomous AI diagnostic engine that unifies seasonal Bayesian anomaly detection, causal dependency graph decomposition, multimodal RAG log vectorization, and epistemic safeguards into an interactive executive dashboard with <b>1-Click automated mitigation</b>.",
+        "When high-stakes enterprise metrics drop (e.g. an unexpected <b>$250,000/day revenue loss</b> in APAC), executive leadership and engineering teams spend 6+ hours sifting through fragmented Datadog APM charts, Jira pull requests, Zendesk support tickets, and Slack alerts trying to answer: <i>What happened, why it happened, and how to fix it?</i><br/><br/>"
+        "<b>CortexKPI</b> is a fully production-dynamic AI diagnostic engine that unifies seasonality-adjusted Bayesian anomaly detection, causal DAG decomposition with generalized graph propagation, multimodal RAG log vectorization, and epistemic safeguards into an interactive executive dashboard with <b>1-Click automated mitigation</b>. Zero hardcoded values — the entire 4-layer ML pipeline adapts to any uploaded dataset automatically.",
         body_style
     ))
 
@@ -93,54 +93,68 @@ def build_pdf():
     story.append(Paragraph("2. Architectural Pillars (The 4 ML Layers)", h2_style))
     
     layer_data = [
-        ["Layer / Module", "Underlying ML Algorithm", "Core Purpose & Enterprise Value"],
-        ["📈 Step 1: Metric Timeline & Anomaly Detection", "Seasonal STL Decomposition +\nBayesian Baselining (Student-t) +\nIsolation Forest Unsupervised ML", "Eliminates false alarms from normal weekend dips; calculates dynamic 95% confidence bands & empirical p-values (p < 0.001)."],
-        ["🌳 Step 2: Causal Metric Dependency Chain", "Structural Causal DAG (NetworkX) +\nMathematical Variance Attribution +\nCounterfactual Intervention Matrix", "Decomposes Revenue into Sessions × Conversion × AOV. Isolates root cause failing leaf node and powers What-If recovery simulations."],
-        ["🔍 Step 3: Multimodal RAG Evidence Fusion", "TF-IDF N-Gram Vectorizer +\nCosine Similarity +\nExponential Temporal Decay", "Scans unstructured Jira deployments, Zendesk support tickets, and Slack alerts. Weights logs closest to the incident window."],
-        ["🕵️ Step 4: Executive Verdict & 1-Click Fix", "4-Pillar Epistemic Safeguards +\nDual-Engine Synthesis +\nLocal Qwen 3.8 / LLM AI Hook", "Generates concise 3-bullet executive briefings; categorizes facts vs gaps; provides 1-click automated rollback to restore healthy baseline."]
+        ["Layer / Module", "Underlying ML Algorithm", "Core Purpose &amp; Enterprise Value"],
+        ["Step 1: Metric Timeline\n&amp; Anomaly Detection", "Seasonal Day-of-Week Adjustment +\nBayesian Rolling Baselines (Student-t) +\nIsolation Forest Unsupervised ML", "Seasonality factor adjusts baselines by day-of-week patterns; calculates dynamic 95% CI bounds &amp; empirical p-values (p &lt; 0.001). Handles single-row edge cases gracefully."],
+        ["Step 2: Causal Metric\nDependency Chain", "Structural Causal DAG (NetworkX) +\nGeneralized Edge Propagation +\nCounterfactual What-If Matrix", "Auto-adapts graph to any uploaded KPI schema. Data-driven variance attribution with zero hardcoded fallback constants. Supports both negative anomalies AND positive growth surges."],
+        ["Step 3: Multimodal RAG\nEvidence Fusion", "TF-IDF N-Gram Vectorizer +\nCosine Similarity +\nExponential Temporal Decay", "Dynamically generates search queries from anomaly context. Weights logs by temporal proximity (half-life decay). Ranks across Jira, Zendesk, and Slack sources."],
+        ["Step 4: Executive Verdict\n&amp; 1-Click Fix", "4-Pillar Epistemic Safeguards +\nDual-Engine Synthesis +\nLocal Qwen 3.8 / LLM AI Hook", "Surge-aware narrative (green for growth, red for outage). Context-aware action buttons (Scale Infrastructure vs Rollback). Confidence scoring counts GROWTH_SURGE status."]
     ]
 
-    t = Table(layer_data, colWidths=[150, 160, 220])
+    t = Table(layer_data, colWidths=[120, 175, 235])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E293B")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 8.5),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
         ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#F8FAFC")),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7.5),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
     ]))
     story.append(t)
     story.append(Spacer(1, 10))
 
-    # User Experience & Personas
-    story.append(Paragraph("3. Dual-Mode UX & Persona-Aware Dashboard", h2_style))
+    # Production-Level Dynamic Features
+    story.append(Paragraph("3. Production-Level Dynamic Features", h2_style))
     story.append(Paragraph(
-        "• <b>Simple View vs Technical Diagnostics:</b> Toggle between plain-English executive summaries for leadership and deep statistical Z-score/distribution matrices for data scientists.<br/>"
-        "• <b>👑 C-Suite Persona:</b> Emphasizes daily financial impact (-$190,107/day) and strategic ROI.<br/>"
-        "• <b>⚙️ DevOps Persona:</b> Displays microservice commit hashes, pull requests, APM logs, and 1-click rollback buttons.<br/>"
-        "• <b>📊 BI Analyst Persona:</b> Displays variance attribution %, p-values, and cosine similarity match scores.<br/>"
-        "• <b>Interactive Node Inspector:</b> Clicking any metric in the causal tree immediately filters all system logs to that specific sub-system.",
+        "• <b>Zero Hardcoded Values:</b> All fallback defaults derived from live data baselines — no magic numbers (removed 420000, 98.0, 2.85, 120000, 185.0).<br/>"
+        "• <b>Seasonality-Adjusted Baselines:</b> Day-of-week seasonal factors actively adjust rolling means to eliminate false weekend alarms.<br/>"
+        "• <b>Auto-Detect Scenario Type:</b> Dynamically classifies scenarios as GROWTH_SURGE, ANOMALY_DROP, or STABLE from data patterns.<br/>"
+        "• <b>Generalized DAG Propagation:</b> What-If simulator propagates through any parent-child edges, not just hardcoded e-commerce pairs.<br/>"
+        "• <b>Memory-Safe File Upload:</b> Streamed to disk via shutil.copyfileobj — handles enterprise-scale datasets without OOM.<br/>"
+        "• <b>Surge-Aware UI:</b> Green banners, scale-infrastructure buttons, and SURGE technical logs for positive growth scenarios.<br/>"
+        "• <b>Robust Error Handling:</b> All 7 API fetch calls validate HTTP status before JSON parsing.",
+        body_style
+    ))
+
+    # User Experience &amp; Personas
+    story.append(Paragraph("4. Dual-Mode UX &amp; Persona-Aware Dashboard", h2_style))
+    story.append(Paragraph(
+        "• <b>Simple View vs Technical Diagnostics:</b> Toggle between plain-English executive summaries and deep statistical Z-score matrices.<br/>"
+        "• <b>C-Suite Persona:</b> Financial impact (-$250K/day), strategic ROI, and 1-click executive actions.<br/>"
+        "• <b>DevOps Persona:</b> Terminal-style logs, Z-scores, deployment triage, and hotfix rollback buttons.<br/>"
+        "• <b>BI Analyst Persona:</b> Variance attribution %, p-values, cosine similarity scores, and hypothesis rejection logs.<br/>"
+        "• <b>Interactive Node Inspector:</b> Click any metric node to filter evidence logs (with toggle-clear support).<br/>"
+        "• <b>What-If Slider:</b> Real-time percentage delta display (+XX.X%) as you drag any metric.",
         body_style
     ))
 
     # Real-World Data Corpus
-    story.append(Paragraph("4. Real-World Datasets Ingested (17,000+ Total Records)", h2_style))
+    story.append(Paragraph("5. Real-World Datasets Ingested (17,000+ Total Records)", h2_style))
     story.append(Paragraph(
-        "• <b>metrics_timeseries.csv:</b> 9,125 rows across 5 global regions (APAC, EU, NORTH_AMERICA, LATAM, EMEA) over 365 days.<br/>"
-        "• <b>jira_deployments.csv:</b> Live-crawled deployment logs across major cloud repositories (Stripe, React, FastAPI, Next.js).<br/>"
-        "• <b>zendesk_tickets.csv:</b> Customer care complaints with sentiment scores (-0.92 to +0.45).<br/>"
-        "• <b>slack_alerts.csv:</b> Datadog APM, PagerDuty, and Cloudflare DNS war room monitoring alerts.<br/>"
-        "• <b>📁 Custom CSV Portal:</b> Ingest any custom enterprise dataset dynamically via the top-header portal in &lt;2 seconds.",
+        "• <b>metrics_timeseries.csv:</b> 9,125 rows across 5 global regions (APAC, EU, NA, LATAM, EMEA) over 365 days.<br/>"
+        "• <b>jira_deployments.csv:</b> 20 live-crawled deployment logs from GitHub (Stripe, React, FastAPI, Next.js).<br/>"
+        "• <b>zendesk_tickets.csv:</b> Customer support tickets with NLP sentiment scores (-0.92 to +0.45).<br/>"
+        "• <b>slack_alerts.csv:</b> Datadog APM, PagerDuty, and Cloudflare war room monitoring alerts.<br/>"
+        "• <b>Custom CSV Portal:</b> Upload any enterprise dataset — the ML pipeline auto-adapts in &lt;2 seconds.",
         body_style
     ))
 
     # How to Run Locally
-    story.append(Paragraph("5. Local Quickstart & Verification Suite", h2_style))
+    story.append(Paragraph("6. Local Quickstart &amp; Verification Suite", h2_style))
     code_text = (
         "# 1. Clone & install\n"
         "git clone https://github.com/abhishek9680/CortexKPI.git\n"
