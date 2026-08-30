@@ -72,9 +72,13 @@ class AnomalyDetectorML:
         X = np.nan_to_num(X, nan=0.0, posinf=1.0, neginf=-1.0)
         
         if len(df) >= 10:
-            self.iso_forest.fit(X)
-            iso_scores = self.iso_forest.decision_function(X)
-            df['ml_anomaly_score'] = np.nan_to_num(iso_scores, nan=0.0, posinf=1.0, neginf=-1.0)
+            try:
+                iso = IsolationForest(n_estimators=50, contamination=0.05, random_state=42, n_jobs=1)
+                iso.fit(X)
+                iso_scores = iso.decision_function(X)
+                df['ml_anomaly_score'] = np.nan_to_num(iso_scores, nan=0.0, posinf=1.0, neginf=-1.0)
+            except Exception:
+                df['ml_anomaly_score'] = np.where(df['z_score'].abs() > 2.0, -0.2, 0.2)
         else:
             df['ml_anomaly_score'] = 0.5
 

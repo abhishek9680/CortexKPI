@@ -1,4 +1,4 @@
-alert_id,channel,timestamp,severity,source,message,metric_tag
-ALT-9901,#war-room-checkout,2026-08-25 14:32:10,CRITICAL,Datadog-APM,"p99 Gateway Latency Spike: Stripe 3DS token handshake latency rose to 4,850ms (Normal baseline: 320ms). 502 Bad Gateway error rate 42.1%.",Payment_Success_Rate
-ALT-8812,#infra-alerts,2026-08-20 09:45:00,WARNING,Cloudflare-DNS,Cloudflare DNS resolving latency spike in EU-West region (220ms vs 18ms baseline).,Conversion_Rate
-ALT-7703,#growth-marketing,2026-08-10 10:15:00,INFO,Google-Analytics,"Viral surge detected on TikTok promo code FLASH40. Concurrent active sessions hit 85,000.",Sessions
+alert_id,timestamp,channel,source,metric_tag,severity,message
+ALT-4401,2026-08-25 14:30:00,#war-room-payments,Datadog-APM,Payment_Success_Rate,CRITICAL,P0 ALERT: payment-gateway-service error rate spiked to 45.8% in APAC region following DEPLOY-8490.
+ALT-4402,2026-08-25 14:35:10,#war-room-payments,PagerDuty,Conversion_Rate,CRITICAL,Triggered incident INC-2026-8890: Stripe 3DS Authorization Webhook failure rate > 40%.
+ALT-4403,2026-08-20 09:45:00,#infra-alerts,Cloudflare-DNS,Latency,INFO,DNS Anycast propagation complete for EU edge nodes.
