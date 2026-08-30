@@ -35,10 +35,10 @@ class HonestDetectiveNarrativeML:
         # 2. Evidence RAG Match Score
         top_match_score = evidence_list[0]["relevance_score"] if (evidence_list and len(evidence_list) > 0) else 0.40
 
-        # 3. Causal Consistency
+        # 3. Causal Consistency (count anomalous nodes: both negative anomalies AND positive surges)
         total_nodes = max(1, len(tree))
-        crit_count = sum(1 for n in tree.values() if n.get("status") in ["CRITICAL_FAIL", "WARNING"])
-        consistency = min(1.0, 0.4 + (crit_count / total_nodes))
+        anomaly_count = sum(1 for n in tree.values() if n.get("status") in ["CRITICAL_FAIL", "WARNING", "GROWTH_SURGE"])
+        consistency = min(1.0, 0.4 + (anomaly_count / total_nodes))
 
         # 4. P-Value Significance
         p_val = float(anomaly_data.get("p_value", 0.01))

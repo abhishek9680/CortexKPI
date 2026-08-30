@@ -194,6 +194,11 @@ def analyze_scenario(req: AnalyzeRequest):
         "p_value": safe_float(peak_row.get('p_value', 0.01))
     }
     evidence_items = log_rag_vectorizer.search_corroborating_evidence(anomaly_context, df_jira, df_zendesk, df_slack)
+    for item in evidence_items:
+        if "color" not in item:
+            item["color"] = "#ff4444"
+        if "badge" not in item:
+            item["badge"] = "Alert"
 
     # LAYER 4: Epistemic Safeguards & Executive Synthesis
     narrative_results = narrative_engine.synthesize_narrative(req.scenario_id, {"timestamp": peak_date, "p_value": safe_float(peak_row.get('p_value', 0.01))}, causal_results, evidence_items)
@@ -276,10 +281,16 @@ def execute_mitigation(req: MitigationRequest):
                 healthy_val = round(base_mean + random.gauss(0, base_std * 0.5), 2)
                 df_metrics.loc[d_mask, 'value'] = healthy_val
             else:
-                # Re-apply simulated anomaly breach (drop by 3 standard deviations)
+                # Re-apply simulated anomaly breach dynamically
+                # For rate metrics: drop to 55% of baseline
+                # For volume metrics: apply 3-sigma deviation
                 if kpi in ['Payment_Success_Rate', 'Conversion_Rate']:
                     anomaly_val = round(base_mean * 0.55 + random.gauss(0, base_std * 0.5), 2)
-                    df_metrics.loc[d_mask, 'value'] = anomaly_val
+                elif kpi in ['Sessions', 'AOV']:
+                    anomaly_val = round(base_mean * 1.35 + random.gauss(0, base_std), 2)
+                else:
+                    anomaly_val = round(base_mean - 3 * base_std + random.gauss(0, base_std * 0.5), 2)
+                df_metrics.loc[d_mask, 'value'] = anomaly_val
 
     # Recompute Revenue = Sessions * (Conversion_Rate / 100) * AOV for consistency
     if 'Revenue' in df_metrics['kpi_name'].values:

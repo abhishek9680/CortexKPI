@@ -15,7 +15,9 @@ window.NarrativeComponent = {
 
     var html = "";
 
-    // Check if scenario is currently in a resolved/healthy state
+    // Detect positive growth surge vs anomaly vs resolved state
+    var isSurge = (narrativeData.financial_loss && narrativeData.financial_loss.includes("+")) ||
+                  (narrativeData.headline && narrativeData.headline.includes("surged"));
     var isResolved = narrativeData.headline.includes("surged +0.0%") || 
                      narrativeData.headline.includes("growth (+0.0%)") || 
                      !(causalTree && causalTree.root_cause_leaf);
@@ -50,7 +52,7 @@ window.NarrativeComponent = {
         var rootBase = rootData.baseline || 0;
 
         html += '<div class="devops-log-block" style="margin-bottom:12px;">' +
-          '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="' + (isResolved ? 'log-level-info' : 'log-level-crit') + '">[' + (isResolved ? 'HEALTHY' : 'CRITICAL') + ']</span> System State: ' + (isResolved ? 'Baseline Healthy' : 'Anomaly Triggered for ' + rootCause.replace(/_/g, " ")) + '</span>' +
+          '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="' + (isSurge ? 'log-level-info' : (isResolved ? 'log-level-info' : 'log-level-crit')) + '">[' + (isSurge ? 'SURGE' : (isResolved ? 'HEALTHY' : 'CRITICAL')) + ']</span> System State: ' + (isSurge ? 'Positive Growth Surge Detected for ' + rootCause.replace(/_/g, " ") : (isResolved ? 'Baseline Healthy' : 'Anomaly Triggered for ' + rootCause.replace(/_/g, " "))) + '</span>' +
           '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-warn">[TRIAGE]</span> Z-score=' + rootZ + ' | Current=' + Number(rootVal).toLocaleString() + ' | Baseline=' + Number(rootBase).toLocaleString() + '</span>' +
           '<span class="log-line"><span class="log-ts">[' + new Date().toISOString().slice(0, 19) + ']</span> <span class="log-level-info">[INFO]</span> Causal path: Revenue → ' + (causalTree.failing_path || []).join(" → ") + '</span>' +
           '</div>';
@@ -134,7 +136,16 @@ window.NarrativeComponent = {
     var actionType = isResolved ? "REINJECT_ANOMALY" : "ROLLBACK_DEPLOYMENT";
     var buttonHtml = "";
 
-    if (isResolved) {
+    if (isSurge) {
+      // Positive growth surge — show capitalize/scale button instead of rollback
+      var surgeLabel = "📈 Capitalize on Growth Surge — Scale Infrastructure";
+      if (persona === "devops") surgeLabel = "⚡ Auto-Scale Capacity to Handle Traffic Surge";
+      else if (persona === "bi") surgeLabel = "📊 Run Attribution Analysis on Growth Drivers";
+
+      buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-outline" data-action="REINJECT_ANOMALY" style="border-color: var(--health-green); color: var(--health-green); font-weight: 700; background: rgba(16, 185, 129, 0.1);">' +
+        surgeLabel +
+      '</button>';
+    } else if (isResolved) {
       buttonHtml = '<button id="execute-mitigation-btn" class="btn btn-outline" data-action="REINJECT_ANOMALY" style="border-color: var(--warning-amber); color: var(--warning-amber); font-weight: 700; background: rgba(245, 158, 11, 0.1);">' +
         '↺ Reset Outage State (Re-Inject Anomaly)' +
       '</button>';

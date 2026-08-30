@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1. Fetch Scenarios dynamically
   function loadScenariosList() {
     fetch("/api/scenarios")
-      .then(res => res.json())
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
       .then(data => {
         scenarioSelect.innerHTML = "";
         data.scenarios.forEach(scen => {
@@ -294,6 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
     var hd = narrative.honest_detective || {};
     var isSurge = (narrative.financial_loss && narrative.financial_loss.includes("+")) || 
                   (narrative.headline && narrative.headline.includes("surged"));
+    document.body.classList.toggle('data-surge', isSurge);
 
     if (persona === "csuite") {
       if (titleEl) titleEl.innerText = narrative.headline;
@@ -312,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (summaryEl) summaryEl.innerText = "Diagnostic Confidence: " + hd.confidence_pct + "% | Automated Triage Active";
       if (impactEl) {
         impactEl.innerText = narrative.financial_loss;
-        impactEl.style.color = "var(--health-green)";
+        impactEl.style.color = isSurge ? "var(--health-green)" : "var(--anomaly-rose)";
       }
       if (badgeEl) {
         badgeEl.innerHTML = isSurge ? "⚡ TRAFFIC SURGE ACTIVE" : "⚡ INCIDENT RESPONSE ACTIVE";

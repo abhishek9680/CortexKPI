@@ -274,6 +274,15 @@ body.persona-bi .persona-bi-only { display: block; }
 body.persona-csuite .executive-banner {
   border-left-color: var(--anomaly-rose);
 }
+body.persona-csuite.data-surge .executive-banner {
+  border-left-color: var(--health-green);
+}
+body.persona-devops.data-surge .executive-banner {
+  border-left-color: var(--health-green);
+}
+body.persona-bi.data-surge .executive-banner {
+  border-left-color: var(--health-green);
+}
 body.persona-csuite .executive-banner .impact-value {
   font-size: 1.6rem;
 }
